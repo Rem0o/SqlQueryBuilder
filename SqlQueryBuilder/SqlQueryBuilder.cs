@@ -17,6 +17,7 @@ namespace SqlQueryBuilder
         private string From { get; set; }
         private Dictionary<string, Type> Tables = new Dictionary<string, Type>();
         private List<string> SelectClauses = new List<string>();
+        private List<string> SelectAggregateClauses = new List<string>();
         private List<string> WhereClauses = new List<string>();
         private List<string> JoinClauses = new List<string>();
         private List<string> OrderByClauses = new List<string>();
@@ -43,18 +44,16 @@ namespace SqlQueryBuilder
             var joinTable2Type = typeof(V);
             var joinTable2Name = string.IsNullOrEmpty(table2Alias) ? joinTable2Type.Name : table2Alias;
 
-            /*try
-            {*/
-            Tables.Add(joinTable2Name, joinTable2Type);
-            /*}
-            catch (ArgumentException)
+            if (Tables.ContainsKey(joinTable2Name))
             {
                 HasError = true;
                 return;
-            }*/
+            }
 
-            var joinTypeStr = (string.IsNullOrEmpty(joinType) ? "" : $"{joinType} ") + "JOIN";
-            var joinTableStr = $"[{joinTable2Type.Name}]" + (!string.IsNullOrEmpty(table2Alias) ? $" AS [{table2Alias}]" : "");
+            Tables.Add(joinTable2Name, joinTable2Type);
+
+            var joinTypeStr = (string.IsNullOrEmpty(joinType) ? string.Empty : $"{joinType} ") + "JOIN";
+            var joinTableStr = $"[{joinTable2Type.Name}]" + (!string.IsNullOrEmpty(table2Alias) ? $" AS [{table2Alias}]" : string.Empty);
             var joinOnStr = $"{first} = {GetFirstSQL<U>(joinTable2Name, key2)}";
 
             var joinClause = $"{joinTypeStr} {joinTableStr} ON {joinOnStr}";
@@ -84,13 +83,20 @@ namespace SqlQueryBuilder
 
         public IQueryBuilderSelect<T> SelectAggregateAs<U>(string aggregationFunc, Expression<Func<U, object>> lambda, string propertyAs, string tableAlias = null) =>
             SkipIfError(() =>
-                SelectClauses.Add($"{aggregationFunc}( {GetFirstSQL<U>(tableAlias, lambda)} ) as {propertyAs}")
+                SelectAggregateClauses.Add($"{aggregationFunc}({GetFirstSQL<U>(tableAlias, lambda)}) AS [{propertyAs}]")
+            );
+
+        private IQueryBuilderWhere<T> Where(string value1, string compare, string value2) =>
+            SkipIfError(() =>
+                WhereClauses.Add($"{value1} {compare} {value2}")
             );
 
         public IQueryBuilderWhere<T> Where<U>(Expression<Func<U, object>> lambda, string compare, string value, string tableAlias = null) =>
-            SkipIfError(() =>
-                WhereClauses.Add($"{GetFirstSQL<U>(tableAlias, lambda)} {compare} {value}")
-            );
+            Where(GetFirstSQL<U>(tableAlias, lambda), compare, value);
+
+        public IQueryBuilderWhere<T> Where<U, V>(Expression<Func<U, object>> lambda1, string compare, Expression<Func<V, object>> lambda2,
+            string table1Alias = null, string table2Alias = null) =>
+            Where(GetFirstSQL<U>(table1Alias, lambda1), compare, GetFirstSQL<V>(table2Alias, lambda2));
 
         public IQueryBuilderGroupBy<T> GroupBy<U>(Expression<Func<U, object>> lambda, string tableAlias = null) =>
             SkipIfError(() =>
@@ -99,24 +105,39 @@ namespace SqlQueryBuilder
 
         public IQueryBuilderOrderBy<T> OrderBy<U>(Expression<Func<U, object>> lambda, bool desc = false, string tableAlias = null) =>
             SkipIfError(() =>
-                OrderByClauses.Add($"{GetSQL<U>(tableAlias, lambda)}{(desc ? " DESC" : "")}")
+                OrderByClauses.Add($"{GetSQL<U>(tableAlias, lambda)}{(desc ? " DESC" : string.Empty)}")
             );
 
         public bool TryBuild(out string query)
         {
-            query = "";
+            query = string.Empty;
 
-            if (HasError)
+            if (Validate() == false)
                 return false;
 
             var tableName = typeof(T).Name;
-            var selectString = string.Join(",", SelectClauses);
+            const string separator = ", ";
+            var selectString = string.Join(separator, SelectAggregateClauses.Concat(SelectClauses));
 
-            query = $"SELECT {selectString} FROM [{typeof(T).Name}] {(From != tableName ? $"AS [{From}] " : "")}"
-                + (JoinClauses.Count > 0 ? string.Join(" ", JoinClauses) + " " : "")
-                + (WhereClauses.Count > 0 ? $"WHERE {string.Join(" AND ", WhereClauses)} " : "")
-                + (GroupByClauses.Count > 0 ? $"GROUP BY {string.Join(",", GroupByClauses)} " : "")
-                + (OrderByClauses.Count > 0 ? $"ORDER BY {string.Join(",", OrderByClauses)} " : "");
+            query = $"SELECT {selectString} FROM [{typeof(T).Name}] {(From != tableName ? $"AS [{From}] " : string.Empty)}"
+                + (JoinClauses.Count > 0 ? string.Join(" ", JoinClauses) + " " : string.Empty)
+                + (WhereClauses.Count > 0 ? $"WHERE {string.Join(" AND ", WhereClauses)} " : string.Empty)
+                + (GroupByClauses.Count > 0 ? $"GROUP BY {string.Join(separator, GroupByClauses)} " : string.Empty)
+                + (OrderByClauses.Count > 0 ? $"ORDER BY {string.Join(separator, OrderByClauses)} " : string.Empty);
+
+            return true;
+        }
+
+        private bool Validate()
+        {
+            if (HasError)
+                return false;
+
+            var missingGroupBy = SelectAggregateClauses.Count > 0 && SelectClauses
+                .Any(select => GroupByClauses.Any(group => select.Contains(group)) == false);
+
+            if (missingGroupBy)
+                return false;
 
             return true;
         }
@@ -136,7 +157,7 @@ namespace SqlQueryBuilder
             else
             {
                 HasError = true;
-                return "";
+                return string.Empty;
             }
         }
 
@@ -161,7 +182,6 @@ namespace SqlQueryBuilder
                 HasError = true;
                 return new string[] { };
             }
-
         }
     }
 }

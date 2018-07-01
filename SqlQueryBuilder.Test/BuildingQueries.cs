@@ -21,7 +21,7 @@ namespace SqlQueryBuilder.Test
             var parsedQuery = query.Replace("@brand", "'TOYOTA'");
 
             var expectedQuery = $"SELECT [Car].* FROM [Car] JOIN [Maker] ON [Car].[MakerId] = [Maker].[Id] WHERE [Maker].[Name] = 'TOYOTA'";
-            Assert.True(CompareQueries(expectedQuery, parsedQuery), "Both queries should be identical");
+            Assert.True(CompareQueries(expectedQuery, parsedQuery));
         }
 
         [Theory]
@@ -44,22 +44,74 @@ namespace SqlQueryBuilder.Test
             var expectedQuery = $"SELECT [{carTableAlias}].* FROM [Car] AS [{carTableAlias}] "
                 + $"JOIN [Maker] AS [{makerTableAlias}] ON [{carTableAlias}].[MakerId] = [{makerTableAlias}].[Id] "
                 + $"WHERE [{makerTableAlias}].[Name] = 'TOYOTA' AND [{carTableAlias}].[ModelYear] > 2005";
-            Assert.True(CompareQueries(expectedQuery, parsedQuery), "Both queries should be identical");
+            Assert.True(CompareQueries(expectedQuery, parsedQuery));
         }
 
         [Fact]
-        public void JoinSamePOCO_WithoutAlias_Exception()
+        public void SelectAggregate_Average_IsValid()
         {
-            Assert.Throws<ArgumentException>(() => 
-                SqlQueryBuilder.StartFrom<Car>()
+            var isValid = SqlQueryBuilder.StartFrom<Car>()
+                .Join<Car, Maker>(car => car.MakerId, maker => maker.Id)
+                .Select<Car>(car => car.ModelYear)
+                .Select<Maker>(maker => maker.Name)
+                .SelectAggregateAs<Car>(AggregateFunctions.AVG, car => car.Mileage, "AverageMileage")
+                .GroupBy<Car>(car => car.ModelYear)
+                .GroupBy<Maker>(maker => maker.Name)
+                .TryBuild(out var query);
+
+            var expectedQuery = $"SELECT AVG([Car].[Mileage]) AS [AverageMileage], [Car].[ModelYear], [Maker].[Name] FROM [Car] "
+                + $"JOIN [Maker] ON [Car].[MakerId] = [Maker].[Id] "
+                + $"GROUP BY [Car].[ModelYear], [Maker].[Name]";
+
+            Assert.True(isValid, "An aggregation query where all select items are in the group by clause should be valid");
+            Assert.True(CompareQueries(expectedQuery, query));
+        }
+
+        [Fact]
+        public void SelectAggregate_AverageWithFailCondition_InvalidQuery()
+        {
+            var isValid = SqlQueryBuilder.StartFrom<Car>()
+                .Join<Car, Maker>(car => car.MakerId, maker => maker.Id)
+                .SelectAggregateAs<Car>(AggregateFunctions.AVG, car => car.Mileage, "AverageMileage")
+                .Select<Car>(car => car.ModelYear)
+                .Select<Car>(car => car.MakerId) // FAIL CONDITION: not in any group by statement
+                .Select<Maker>(maker => maker.Name)
+                .GroupBy<Car>(car => car.ModelYear)
+                .GroupBy<Maker>(maker => maker.Name)
+                .TryBuild(out var query);
+
+            Assert.False(isValid, "An aggregation query with a select item not in the group by clause should not be valid");
+        }
+
+        [Fact]
+        public void JoinSamePOCO_WithoutAlias_InvalidQuery()
+        {
+            var isValid = SqlQueryBuilder.StartFrom<Car>()
                     .LeftJoin<Car, Car>(car1 => car1.Id, car2 => car2.Id)
                     .SelectAll<Car>()
-                    .TryBuild(out var query));
+                    .TryBuild(out var query);
+
+            Assert.False(isValid);
+        }
+
+        [Fact]
+        public void JoinSamePOCO_WithAlias_ValidQuery()
+        {
+            const string CAR1 = "CAR1";
+            const string CAR2 = "CAR2";
+
+            var isValid = SqlQueryBuilder.StartFrom<Car>(CAR1)
+                    .LeftJoin<Car, Car>(car1 => car1.ModelYear, car2 => car2.ModelYear, CAR1, CAR2)
+                    .SelectAll<Car>(CAR1)
+                    .Where<Car, Car>(car1 => car1.Id, Compare.NEQ, car2 => car2.Id, CAR1, CAR2)
+                    .TryBuild(out var query);
+
+            Assert.True(isValid);
         }
 
         private bool CompareQueries(string first, string second)
         {
-            string prep(string s) => s.Trim().ToUpperInvariant();
+            string prep(string s) => s.Trim().ToUpperInvariant().Replace(" ", string.Empty).Replace(Environment.NewLine, string.Empty);
             return prep(first) == prep(second);
         }
     }
