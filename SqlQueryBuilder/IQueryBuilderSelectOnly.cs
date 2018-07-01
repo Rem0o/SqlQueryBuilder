@@ -3,11 +3,10 @@ using System.Linq.Expressions;
 
 namespace SqlQueryBuilder
 {
-    public interface IQueryBuilderSelectOnly<T>
+    public interface IQueryBuilderSelectOnly
     {
-        IQueryBuilderSelect<T> Select<U>(Expression<Func<U, object>> lambda, string tableAlias = null);
-        //ISelect<T> SelectAs<U, V>(string propertyAs, Expression<Func<U, V>> lambda, string tableAlias = null);
-        IQueryBuilderSelect<T> SelectAll<U>(string tableAlias = null);
-        IQueryBuilderSelect<T> SelectAggregateAs<U>(string aggregationFunc, Expression<Func<U, object>> lambda, string propertyAs, string tableAlias = null);
+        IQueryBuilderSelect Select<T>(Expression<Func<T, object>> lambda, string tableAlias = null);
+        IQueryBuilderSelect SelectAll<T>(string tableAlias = null);
+        IQueryBuilderSelect SelectAggregateAs<T>(string aggregationFunc, Expression<Func<T, object>> lambda, string propertyAs, string tableAlias = null);
     }
 }

@@ -5,16 +5,10 @@ using System.Linq.Expressions;
 
 namespace SqlQueryBuilder
 {
-    public static class SqlQueryBuilder
-    {
-        public static IQueryBuilderJoinOrSelect<T> StartFrom<T>(string tableAlias = null)
-            => new SqlQueryBuilder<T>(string.IsNullOrEmpty(tableAlias) ? typeof(T).Name : tableAlias);
-    }
-
-    public class SqlQueryBuilder<T> : IQueryBuilderJoinOrSelect<T>, IQueryBuilderSelect<T>
+    public class SqlQueryBuilder : IQueryBuilderFrom, IQueryBuilderJoinOrSelect, IQueryBuilderSelect
     {
         private bool HasError { get; set; } = false;
-        private string From { get; set; }
+        private Tuple<string, Type> TableFrom { get; set; }
         private Dictionary<string, Type> Tables = new Dictionary<string, Type>();
         private List<string> SelectClauses = new List<string>();
         private List<string> SelectAggregateClauses = new List<string>();
@@ -23,13 +17,7 @@ namespace SqlQueryBuilder
         private List<string> OrderByClauses = new List<string>();
         private List<string> GroupByClauses = new List<string>();
 
-        public SqlQueryBuilder(string tableAlias)
-        {
-            From = tableAlias;
-            Tables.Add(tableAlias, typeof(T));
-        }
-
-        private SqlQueryBuilder<T> SkipIfError(Action action)
+        private SqlQueryBuilder SkipIfError(Action action)
         {
             if (!HasError)
                 action();
@@ -37,11 +25,20 @@ namespace SqlQueryBuilder
             return this;
         }
 
-        public IQueryBuilderJoinOrSelect<T> Join<U, V>(Expression<Func<U, object>> key1, Expression<Func<V, object>> key2, string table1Alias = null,
+        public IQueryBuilderJoinOrSelect From<T>(string tableAlias = null)
+        {
+            var type = typeof(T);
+            var tableAliasKey = tableAlias ?? type.Name;
+            TableFrom = new Tuple<string, Type>(tableAliasKey, type);
+            Tables.Add(tableAliasKey, type);
+            return this;
+        }
+
+        public IQueryBuilderJoinOrSelect Join<T, U>(Expression<Func<T, object>> key1, Expression<Func<U, object>> key2, string table1Alias = null,
             string table2Alias = null, string joinType = null) => SkipIfError(() =>
         {
-            var first = GetFirstSQL<U>(table1Alias, key1);
-            var joinTable2Type = typeof(V);
+            var first = GetFirstSQL<T>(table1Alias, key1);
+            var joinTable2Type = typeof(U);
             var joinTable2Name = string.IsNullOrEmpty(table2Alias) ? joinTable2Type.Name : table2Alias;
 
             if (Tables.ContainsKey(joinTable2Name))
@@ -54,58 +51,52 @@ namespace SqlQueryBuilder
 
             var joinTypeStr = (string.IsNullOrEmpty(joinType) ? string.Empty : $"{joinType} ") + "JOIN";
             var joinTableStr = $"[{joinTable2Type.Name}]" + (!string.IsNullOrEmpty(table2Alias) ? $" AS [{table2Alias}]" : string.Empty);
-            var joinOnStr = $"{first} = {GetFirstSQL<U>(joinTable2Name, key2)}";
+            var joinOnStr = $"{first} = {GetFirstSQL<T>(joinTable2Name, key2)}";
 
             var joinClause = $"{joinTypeStr} {joinTableStr} ON {joinOnStr}";
 
             JoinClauses.Add(joinClause);
         });
 
-        public IQueryBuilderJoinOrSelect<T> LeftJoin<U, V>(Expression<Func<U, object>> key1, Expression<Func<V, object>> key2, string table1Alias = null,
+        public IQueryBuilderJoinOrSelect LeftJoin<T, U>(Expression<Func<T, object>> key1, Expression<Func<U, object>> key2, string table1Alias = null,
             string table2Alias = null)
             => Join(key1, key2, table1Alias, table2Alias, "LEFT");
 
-        public IQueryBuilderSelect<T> SelectAll<U>(string tableAlias = null) =>
+        public IQueryBuilderSelect SelectAll<T>(string tableAlias = null) =>
             SkipIfError(() =>
-                SelectClauses.Add(GetSQL<U>(tableAlias, "*"))
+                SelectClauses.Add(GetSQL<T>(tableAlias, "*"))
             );
 
-        public IQueryBuilderSelect<T> Select<U>(Expression<Func<U, object>> lambda, string tableAlias = null) =>
+        public IQueryBuilderSelect Select<T>(Expression<Func<T, object>> lambda, string tableAlias = null) =>
             SkipIfError(() =>
-                SelectClauses.AddRange(GetSQL<U>(tableAlias, lambda))
+                SelectClauses.AddRange(GetSQL<T>(tableAlias, lambda))
             );
 
-        /*
-        public ISelect<T> SelectAs<U, V>(string propertyAs, Expression<Func<U, V>> lambda, string tableAlias = null) =>
+        public IQueryBuilderSelect SelectAggregateAs<T>(string aggregationFunc, Expression<Func<T, object>> lambda, string propertyAs, string tableAlias = null) =>
             SkipIfError(() =>
-                SelectClauses.Add($"{GetFirstSQL<U>(tableAlias, lambda)} as {propertyAs}"));
-        */
-
-        public IQueryBuilderSelect<T> SelectAggregateAs<U>(string aggregationFunc, Expression<Func<U, object>> lambda, string propertyAs, string tableAlias = null) =>
-            SkipIfError(() =>
-                SelectAggregateClauses.Add($"{aggregationFunc}({GetFirstSQL<U>(tableAlias, lambda)}) AS [{propertyAs}]")
+                SelectAggregateClauses.Add($"{aggregationFunc}({GetFirstSQL<T>(tableAlias, lambda)}) AS [{propertyAs}]")
             );
 
-        private IQueryBuilderWhere<T> Where(string value1, string compare, string value2) =>
+        private IQueryBuilderWhere Where(string value1, string compare, string value2) =>
             SkipIfError(() =>
                 WhereClauses.Add($"{value1} {compare} {value2}")
             );
 
-        public IQueryBuilderWhere<T> Where<U>(Expression<Func<U, object>> lambda, string compare, string value, string tableAlias = null) =>
-            Where(GetFirstSQL<U>(tableAlias, lambda), compare, value);
+        public IQueryBuilderWhere Where<T>(Expression<Func<T, object>> lambda, string compare, string value, string tableAlias = null) =>
+            Where(GetFirstSQL<T>(tableAlias, lambda), compare, value);
 
-        public IQueryBuilderWhere<T> Where<U, V>(Expression<Func<U, object>> lambda1, string compare, Expression<Func<V, object>> lambda2,
+        public IQueryBuilderWhere Where<T, U>(Expression<Func<T, object>> lambda1, string compare, Expression<Func<U, object>> lambda2,
             string table1Alias = null, string table2Alias = null) =>
-            Where(GetFirstSQL<U>(table1Alias, lambda1), compare, GetFirstSQL<V>(table2Alias, lambda2));
+            Where(GetFirstSQL<T>(table1Alias, lambda1), compare, GetFirstSQL<U>(table2Alias, lambda2));
 
-        public IQueryBuilderGroupBy<T> GroupBy<U>(Expression<Func<U, object>> lambda, string tableAlias = null) =>
+        public IQueryBuilderGroupBy GroupBy<T>(Expression<Func<T, object>> lambda, string tableAlias = null) =>
             SkipIfError(() =>
-                GroupByClauses.Add(GetFirstSQL<U>(tableAlias, lambda))
+                GroupByClauses.Add(GetFirstSQL<T>(tableAlias, lambda))
             );
 
-        public IQueryBuilderOrderBy<T> OrderBy<U>(Expression<Func<U, object>> lambda, bool desc = false, string tableAlias = null) =>
+        public IQueryBuilderOrderBy OrderBy<T>(Expression<Func<T, object>> lambda, bool desc = false, string tableAlias = null) =>
             SkipIfError(() =>
-                OrderByClauses.Add($"{GetSQL<U>(tableAlias, lambda)}{(desc ? " DESC" : string.Empty)}")
+                OrderByClauses.Add($"{GetSQL<T>(tableAlias, lambda)}{(desc ? " DESC" : string.Empty)}")
             );
 
         public bool TryBuild(out string query)
@@ -115,11 +106,13 @@ namespace SqlQueryBuilder
             if (Validate() == false)
                 return false;
 
-            var tableName = typeof(T).Name;
+            var tableName = TableFrom.Item2.Name;
+            var tableAlias = TableFrom.Item1;
+
             const string separator = ", ";
             var selectString = string.Join(separator, SelectAggregateClauses.Concat(SelectClauses));
 
-            query = $"SELECT {selectString} FROM [{typeof(T).Name}] {(From != tableName ? $"AS [{From}] " : string.Empty)}"
+            query = $"SELECT {selectString} FROM [{tableName}] {(tableAlias != tableName ? $"AS [{TableFrom.Item1}] " : string.Empty)}"
                 + (JoinClauses.Count > 0 ? string.Join(" ", JoinClauses) + " " : string.Empty)
                 + (WhereClauses.Count > 0 ? $"WHERE {string.Join(" AND ", WhereClauses)} " : string.Empty)
                 + (GroupByClauses.Count > 0 ? $"GROUP BY {string.Join(separator, GroupByClauses)} " : string.Empty)
@@ -142,12 +135,12 @@ namespace SqlQueryBuilder
             return true;
         }
 
-        private string GetSQL<U>(string tableAlias, string col)
+        private string GetSQL<T>(string tableAlias, string col)
         {
             KeyValuePair<string, Type> kv = Tables.FirstOrDefault(x =>
             {
                 if (string.IsNullOrEmpty(tableAlias))
-                    return x.Value.Name == typeof(U).Name;
+                    return x.Value.Name == typeof(T).Name;
                 else
                     return x.Key == tableAlias;
             });
@@ -161,11 +154,11 @@ namespace SqlQueryBuilder
             }
         }
 
-        private IEnumerable<string> GetSQL<U>(string tableName, Expression expression) =>
-            NameOf(expression).Select(x => GetSQL<U>(tableName, x));
+        private IEnumerable<string> GetSQL<T>(string tableName, Expression expression) =>
+            NameOf(expression).Select(x => GetSQL<T>(tableName, x));
 
-        private string GetFirstSQL<U>(string tableName, Expression expression) =>
-            NameOf(expression).Select(x => GetSQL<U>(tableName, x)).FirstOrDefault();
+        private string GetFirstSQL<T>(string tableName, Expression expression) =>
+            NameOf(expression).Select(x => GetSQL<T>(tableName, x)).FirstOrDefault();
 
         private IEnumerable<string> NameOf(Expression expression)
         {

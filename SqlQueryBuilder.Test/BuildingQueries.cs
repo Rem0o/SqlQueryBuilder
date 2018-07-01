@@ -6,10 +6,12 @@ namespace SqlQueryBuilder.Test
 {
     public class BuildingQueries
     {
+        private IQueryBuilderFrom GetBuilder() => new SqlQueryBuilder();
+
         [Fact]
         public void SelectFrom_POCO_ValidQuery()
         {
-            var isValid = SqlQueryBuilder.StartFrom<Car>()
+            var isValid = GetBuilder().From<Car>()
                 .Join<Car, Maker>(car => car.MakerId, maker => maker.Id)
                 .SelectAll<Car>()
                 .Where<Maker>(maker => maker.Name, Compare.EQ, "@brand")
@@ -29,7 +31,7 @@ namespace SqlQueryBuilder.Test
         [InlineData("Voiture", "Manufacturier")]
         public void SelectFrom_POCOWithAlias_ValidQuery(string carTableAlias, string makerTableAlias)
         {
-            var isValid = SqlQueryBuilder.StartFrom<Car>(carTableAlias)
+            var isValid = GetBuilder().From<Car>(carTableAlias)
                 .Join<Car, Maker>(car => car.MakerId, maker => maker.Id, table1Alias: carTableAlias, table2Alias: makerTableAlias)
                 .SelectAll<Car>(carTableAlias)
                 .Where<Maker>(maker => maker.Name, Compare.EQ, "@brand", tableAlias: makerTableAlias)
@@ -48,9 +50,34 @@ namespace SqlQueryBuilder.Test
         }
 
         [Fact]
+        public void SelectFrom_POCOWithAlias_InferredAliasValidQuery()
+        {
+            const string CAR_ALIAS = "SomeCar";
+            const string MAKER_ALIAS = "SomeMaker";
+
+            var isValid = GetBuilder().From<Car>(CAR_ALIAS)
+                    .LeftJoin<Car, Maker>(car => car.MakerId, maker => maker.Id, table2Alias: MAKER_ALIAS)
+                    // inferred alias for "Car" because "Car" is only referred once
+                    .SelectAll<Car>()
+                    // inferred alias for "Maker" because "Maker" is only referred once
+                    .Where<Maker>(maker => maker.Name, Compare.LIKE, "@brand") 
+                    .TryBuild(out var query);
+
+            var parsedQuery = query.Replace("@brand", "'Nissan'");
+
+            Assert.True(isValid);
+
+            var expectedQuery = $"SELECT [{CAR_ALIAS}].* FROM [Car] AS [{CAR_ALIAS}] "
+                + $"LEFT JOIN [Maker] AS [{MAKER_ALIAS}] ON [{CAR_ALIAS}].[MakerId] = [{MAKER_ALIAS}].[Id] "
+                + $"WHERE [{MAKER_ALIAS}].[Name] LIKE 'Nissan'";
+
+            Assert.True(CompareQueries(expectedQuery, parsedQuery));
+        }
+
+        [Fact]
         public void SelectAggregate_Average_IsValid()
         {
-            var isValid = SqlQueryBuilder.StartFrom<Car>()
+            var isValid = GetBuilder().From<Car>()
                 .Join<Car, Maker>(car => car.MakerId, maker => maker.Id)
                 .Select<Car>(car => car.ModelYear)
                 .Select<Maker>(maker => maker.Name)
@@ -70,7 +97,7 @@ namespace SqlQueryBuilder.Test
         [Fact]
         public void SelectAggregate_AverageWithFailCondition_InvalidQuery()
         {
-            var isValid = SqlQueryBuilder.StartFrom<Car>()
+            var isValid = GetBuilder().From<Car>()
                 .Join<Car, Maker>(car => car.MakerId, maker => maker.Id)
                 .SelectAggregateAs<Car>(AggregateFunctions.AVG, car => car.Mileage, "AverageMileage")
                 .Select<Car>(car => car.ModelYear)
@@ -86,7 +113,7 @@ namespace SqlQueryBuilder.Test
         [Fact]
         public void JoinSamePOCO_WithoutAlias_InvalidQuery()
         {
-            var isValid = SqlQueryBuilder.StartFrom<Car>()
+            var isValid = GetBuilder().From<Car>()
                     .LeftJoin<Car, Car>(car1 => car1.Id, car2 => car2.Id)
                     .SelectAll<Car>()
                     .TryBuild(out var query);
@@ -100,7 +127,7 @@ namespace SqlQueryBuilder.Test
             const string CAR1 = "CAR1";
             const string CAR2 = "CAR2";
 
-            var isValid = SqlQueryBuilder.StartFrom<Car>(CAR1)
+            var isValid = GetBuilder().From<Car>(CAR1)
                     .LeftJoin<Car, Car>(car1 => car1.ModelYear, car2 => car2.ModelYear, CAR1, CAR2)
                     .SelectAll<Car>(CAR1)
                     .Where<Car, Car>(car1 => car1.Id, Compare.NEQ, car2 => car2.Id, CAR1, CAR2)

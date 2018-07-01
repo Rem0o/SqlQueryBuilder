@@ -2,9 +2,9 @@
 using System.Linq.Expressions;
 
 namespace SqlQueryBuilder
-{
-    public interface IQueryBuilderGroupBy<T>: IQueryBuilderOrderBy<T>
+{ 
+    public interface IQueryBuilderGroupBy: IQueryBuilderOrderBy
     {
-        IQueryBuilderGroupBy<T> GroupBy<U>(Expression<Func<U, object>> lambda, string tableAlias = null);
+        IQueryBuilderGroupBy GroupBy<T>(Expression<Func<T, object>> lambda, string tableAlias = null);
     }
 }
