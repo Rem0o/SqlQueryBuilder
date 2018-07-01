@@ -2,9 +2,10 @@
 
 namespace SqlQueryBuilder.Test.POCO
 {
-    public class Maker
+    public class CarMaker
     {
         public Guid Id { get; set; }
         public string Name { get; set;  }
+        public Guid CountryOfOriginId { get; set; }
     }
 }

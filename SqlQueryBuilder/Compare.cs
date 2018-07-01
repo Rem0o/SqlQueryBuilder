@@ -10,5 +10,6 @@
         public const string NEQ = "<>";
         public const string LIKE = "LIKE";
         public const string IN = "IN";
+        public const string IS = "IS";
     }
 }
