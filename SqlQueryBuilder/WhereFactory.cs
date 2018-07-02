@@ -18,10 +18,12 @@ namespace SqlQueryBuilder
             _whereClause = $"(({GetFirstSQL<T>(tableAlias, lambda)}) {compare} ({value}))";
             return this;
         }
-            
+
         public IWhereBuilder Compare<T, U>(Expression<Func<T, object>> lambda1, string compare, Expression<Func<U, object>> lambda2,
-            string table1Alias = null, string table2Alias = null) =>
-            Compare(lambda1, compare, GetFirstSQL<T>(table2Alias, lambda2), table1Alias);
+            string table1Alias = null, string table2Alias = null)
+        {
+            return Compare(lambda1, compare, GetFirstSQL<T>(table2Alias, lambda2), table1Alias);
+        }
 
         public IWhereBuilder Or(params Func<IWhereBuilderFactory, IWhereBuilder>[] conditions) => JoinConditions("OR", conditions);
 

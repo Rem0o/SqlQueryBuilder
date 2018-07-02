@@ -56,11 +56,15 @@ namespace SqlQueryBuilder
 
         public IQueryBuilderJoinOrSelect LeftJoin<T, U>(Expression<Func<T, object>> key1, Expression<Func<U, object>> key2, string table1Alias = null,
             string table2Alias = null)
-            => Join(key1, key2, table1Alias, table2Alias, "LEFT");
+        {
+            return Join(key1, key2, table1Alias, table2Alias, "LEFT");
+        }
 
         public IQueryBuilderJoinOrSelect RightJoin<T, U>(Expression<Func<T, object>> key1, Expression<Func<U, object>> key2, string table1Alias = null,
             string table2Alias = null)
-            => Join(key1, key2, table1Alias, table2Alias, "RIGHT");
+        {
+            return Join(key1, key2, table1Alias, table2Alias, "RIGHT");
+        }
 
         public IQueryBuilderSelect SelectAll<T>(string tableAlias = null) =>
             SkipIfError(() =>
@@ -82,13 +86,17 @@ namespace SqlQueryBuilder
                 WhereClauses.Add($"({value1} {compare} {value2})")
             );
 
-        public IQueryBuilderWhere Where<T>(Expression<Func<T, object>> lambda, string compare, string value, string tableAlias = null) =>
-            Where(GetFirstSQL<T>(tableAlias, lambda), compare, value);
-
+        public IQueryBuilderWhere Where<T>(Expression<Func<T, object>> lambda, string compare, string value, string tableAlias = null)
+        {
+            return Where(GetFirstSQL<T>(tableAlias, lambda), compare, value);
+        }
+            
         public IQueryBuilderWhere Where<T, U>(Expression<Func<T, object>> lambda1, string compare, Expression<Func<U, object>> lambda2,
-            string table1Alias = null, string table2Alias = null) =>
-            Where(GetFirstSQL<T>(table1Alias, lambda1), compare, GetFirstSQL<U>(table2Alias, lambda2));
-
+            string table1Alias = null, string table2Alias = null)
+        {
+            return Where(GetFirstSQL<T>(table1Alias, lambda1), compare, GetFirstSQL<U>(table2Alias, lambda2));
+        }
+            
         public IQueryBuilderWhere Where(Func<IWhereBuilderFactory, IWhereBuilder> build) =>
             SkipIfError(() =>
             {

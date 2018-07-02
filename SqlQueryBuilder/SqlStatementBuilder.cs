@@ -39,11 +39,15 @@ namespace SqlQueryBuilder
             }
         }
 
-        protected IEnumerable<string> GetSQL<T>(string tableName, Expression expression) =>
-            NameOf(expression).Select(x => GetSQL<T>(tableName, x));
-
-        protected string GetFirstSQL<T>(string tableName, Expression expression) =>
-            NameOf(expression).Select(x => GetSQL<T>(tableName, x)).FirstOrDefault();
+        protected IEnumerable<string> GetSQL<T>(string tableName, Expression expression)
+        {
+            return NameOf(expression).Select(x => GetSQL<T>(tableName, x));
+        }
+            
+        protected string GetFirstSQL<T>(string tableName, Expression expression)
+        {
+            return NameOf(expression).Select(x => GetSQL<T>(tableName, x)).FirstOrDefault();
+        }
 
         protected IEnumerable<string> NameOf(Expression expression)
         {
