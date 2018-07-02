@@ -29,10 +29,8 @@ namespace SqlQueryBuilder
 
         private IWhereBuilder JoinConditions(string compare, params Func<IWhereBuilderFactory, IWhereBuilder>[] clauses)
         {
-            var clauseResults = clauses.Select(x => {
-                var f = new WhereFactory(Tables);
-                var builder = x(f);
-                var success = builder.TryBuild(out string whereClause);
+            var clauseResults = clauses.Select(condition => {
+                var success = condition(new WhereFactory(Tables)).TryBuild(out string whereClause);
                 return new { success, whereClause };
             });
 

@@ -187,7 +187,7 @@ namespace SqlQueryBuilder.Test
                 .Where(CountryCondition) // Fail condition
                 .TryBuild(out var query);
 
-            Assert.False(isValid, "An invalid where should cause an otherwise valid query, invalid");
+            Assert.False(isValid, "An invalid where should cause an otherwise valid query to be invalid");
         }
 
         private IWhereBuilder CountryCondition(IWhereBuilderFactory factory)
