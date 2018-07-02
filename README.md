@@ -100,19 +100,17 @@ private IWhereBuilder DreamCarExceptionCondition(IWhereBuilderFactory factory)
 ```
 The conditions above are assembled with a "OR" to create our very specific query! Also, notice the anonymous object used inside the select function.
 ```c#
-public string GetVerySpecificCarQuery()
-{
-    var isValid = new SqlQueryBuilder().From<Car>()
-        .Join<Car, CarMaker>(car => car.CarMakerId, maker => maker.Id)
-        .Join<CarMaker, Country>(maker => maker.CountryOfOriginId, country => country.Id)
-        .Select<Car>(car => new { car.Id, car.Price })
-        .Where(factory => factory.Or(
-            CheapCarCondition,
-            DreamCarExceptionCondition
-        ))
-        .OrderBy<Car>(car => car.Price, desc: true)
-        .TryBuild(out string query);
-}
+
+var isValid = new SqlQueryBuilder().From<Car>()
+    .Join<Car, CarMaker>(car => car.CarMakerId, maker => maker.Id)
+    .Join<CarMaker, Country>(maker => maker.CountryOfOriginId, country => country.Id)
+    .Select<Car>(car => new { car.Id, car.Price })
+    .Where(factory => factory.Or(
+        CheapCarCondition,
+        DreamCarExceptionCondition
+    ))
+    .OrderBy<Car>(car => car.Price, desc: true)
+    .TryBuild(out string query);
 ```
 
 Resulting SQL:
