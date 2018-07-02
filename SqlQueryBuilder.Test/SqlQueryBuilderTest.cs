@@ -20,11 +20,8 @@ namespace SqlQueryBuilder.Test
 
             Assert.True(isValid, "The query should be valid");
 
-            // what a DAL would do with parameters
-            var parsedQuery = query.Replace("@brand", "'TOYOTA'");
-
-            var expectedQuery = $"SELECT [Car].* FROM [Car] JOIN [CarMaker] ON [Car].[CarMakerId] = [CarMaker].[Id] WHERE ([CarMaker].[Name] = 'TOYOTA')";
-            Assert.True(CompareQueries(expectedQuery, parsedQuery));
+            var expectedQuery = $"SELECT [Car].* FROM [Car] JOIN [CarMaker] ON [Car].[CarMakerId] = [CarMaker].[Id] WHERE ([CarMaker].[Name] = @brand)";
+            Assert.True(CompareQueries(expectedQuery, query));
         }
 
         [Theory]
@@ -41,13 +38,10 @@ namespace SqlQueryBuilder.Test
 
             Assert.True(isValid, "The query should be valid");
 
-            // what a DAL would do with parameters
-            var parsedQuery = query.Replace("@brand", "'TOYOTA'").Replace("@year", "2005");
-
             var expectedQuery = $"SELECT [{carTableAlias}].* FROM [Car] AS [{carTableAlias}] "
                 + $"JOIN [CarMaker] AS [{makerTableAlias}] ON [{carTableAlias}].[CarMakerId] = [{makerTableAlias}].[Id] "
-                + $"WHERE ([{makerTableAlias}].[Name] = 'TOYOTA') AND ([{carTableAlias}].[ModelYear] > 2005)";
-            Assert.True(CompareQueries(expectedQuery, parsedQuery));
+                + $"WHERE ([{makerTableAlias}].[Name] = @brand) AND ([{carTableAlias}].[ModelYear] > @year)";
+            Assert.True(CompareQueries(expectedQuery, query));
         }
 
         [Fact]
@@ -64,16 +58,13 @@ namespace SqlQueryBuilder.Test
                     .Where<CarMaker>(maker => maker.Name, Compare.LIKE, "@brand") 
                     .TryBuild(out var query);
 
-            // what a DAL would do with parameters
-            var parsedQuery = query.Replace("@brand", "'Nissan'");
-
             Assert.True(isValid);
 
             var expectedQuery = $"SELECT [{CAR_ALIAS}].* FROM [Car] AS [{CAR_ALIAS}] "
                 + $"LEFT JOIN [CarMaker] AS [{MAKER_ALIAS}] ON [{CAR_ALIAS}].[CarMakerId] = [{MAKER_ALIAS}].[Id] "
-                + $"WHERE ([{MAKER_ALIAS}].[Name] LIKE 'Nissan')";
+                + $"WHERE ([{MAKER_ALIAS}].[Name] LIKE @brand)";
 
-            Assert.True(CompareQueries(expectedQuery, parsedQuery));
+            Assert.True(CompareQueries(expectedQuery, query));
         }
 
         [Fact]
@@ -120,7 +111,7 @@ namespace SqlQueryBuilder.Test
                 .Select<CarMaker>(maker => maker.Name)
                 .GroupBy<Car>(car => car.ModelYear)
                 .GroupBy<CarMaker>(maker => maker.Name)
-                .TryBuild(out var query);
+                .TryBuild(out _);
 
             Assert.False(isValid, "An aggregation query with a select item not in any group by clauses should not be valid");
         }
@@ -131,7 +122,7 @@ namespace SqlQueryBuilder.Test
             var isValid = GetBuilder().From<Car>()
                     .LeftJoin<Car, Car>(car1 => car1.Id, car2 => car2.Id)
                     .SelectAll<Car>() // which?
-                    .TryBuild(out var query);
+                    .TryBuild(out _);
 
             Assert.False(isValid, "A table join on the same table without an alias should invalidate the query");
         }
@@ -143,7 +134,7 @@ namespace SqlQueryBuilder.Test
             var isValid = GetBuilder().From<Car>(ALIAS)
                     .LeftJoin<Car, Car>(car1 => car1.Id, car2 => car2.Id, ALIAS, ALIAS)
                     .SelectAll<Car>(ALIAS) // which?
-                    .TryBuild(out var query);
+                    .TryBuild(out _);
 
             Assert.False(isValid, "A table join with the same alias should invalidate the query");
         }
@@ -158,7 +149,7 @@ namespace SqlQueryBuilder.Test
                     .LeftJoin<Car, Car>(car1 => car1.ModelYear, car2 => car2.ModelYear, CAR1, CAR2)
                     .SelectAll<Car>(CAR1)
                     .Where<Car, Car>(car1 => car1.Id, Compare.NEQ, car2 => car2.Id, CAR1, CAR2)
-                    .TryBuild(out var query);
+                    .TryBuild(out _);
 
             Assert.True(isValid);
         }
@@ -174,14 +165,14 @@ namespace SqlQueryBuilder.Test
 
             var factory = new WhereFactory(mapper);
             var whereIsValid = CountryCondition(new WhereFactory(mapper))
-                .TryBuild(out var where);
+                .TryBuild(out _);
 
             Assert.False(whereIsValid, "The where clause needs to be invalid");
 
             var basicQuery = GetBuilder().From<Car>()
                 .SelectAll<Car>();
 
-            Assert.True(basicQuery.TryBuild(out _));
+            Assert.True(basicQuery.TryBuild(out _), "The basic query should be valid");
 
             var isValid = basicQuery
                 .Where(CountryCondition) // Fail condition

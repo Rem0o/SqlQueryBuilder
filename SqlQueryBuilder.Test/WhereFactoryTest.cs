@@ -8,15 +8,6 @@ namespace SqlQueryBuilder.Test
 {
     public class WhereFactoryTest
     {
-        private static Dictionary<string, Type> GetMapper()
-        {
-            return new Dictionary<string, Type>()
-            {
-                {"Car", typeof(Car) },
-                {"CarMaker", typeof(CarMaker) }
-            };
-        }
-
         [Fact]
         public void Or_WithinMapper_Valid()
         {
@@ -52,7 +43,7 @@ namespace SqlQueryBuilder.Test
                 SweetSpotLexusCondition
             );
 
-            Assert.False(builder.TryBuild(out var whereClause));
+            Assert.False(builder.TryBuild(out _));
         }
 
         private const string CHEAPCAR_MILEAGE = "100000";
@@ -81,5 +72,13 @@ namespace SqlQueryBuilder.Test
             );
         }
 
+        private static Dictionary<string, Type> GetMapper()
+        {
+            return new Dictionary<string, Type>()
+            {
+                {"Car", typeof(Car) },
+                {"CarMaker", typeof(CarMaker) }
+            };
+        }
     }
 }

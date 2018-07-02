@@ -5,7 +5,7 @@ using System.Linq.Expressions;
 
 namespace SqlQueryBuilder
 {
-    public class WhereFactory: SqlStatementFactory, IWhereBuilderFactory, IWhereBuilder
+    public class WhereFactory: SqlClauseFactory, IWhereBuilderFactory, IWhereBuilder
     {
         private string _whereClause { get; set; }
 

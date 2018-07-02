@@ -5,7 +5,7 @@ using System.Linq.Expressions;
 
 namespace SqlQueryBuilder
 {
-    public class SqlQueryBuilder : SqlStatementFactory, IQueryBuilderFrom, IQueryBuilderJoinOrSelect, IQueryBuilderSelect
+    public class SqlQueryBuilder : SqlClauseFactory, IQueryBuilderFrom, IQueryBuilderJoinOrSelect, IQueryBuilderSelect
     {
         private Tuple<string, Type> TableFrom { get; set; }
         private List<string> SelectClauses = new List<string>();
@@ -66,6 +66,12 @@ namespace SqlQueryBuilder
             return Join(key1, key2, table1Alias, table2Alias, "RIGHT");
         }
 
+        public IQueryBuilderJoinOrSelect FullOuterJoin<T, U>(Expression<Func<T, object>> key1, Expression<Func<U, object>> key2, string table1Alias = null,
+            string table2Alias = null)
+        {
+            return Join(key1, key2, table1Alias, table2Alias, "FULL OUTER");
+        }
+
         public IQueryBuilderSelect SelectAll<T>(string tableAlias = null) =>
             SkipIfError(() =>
                 SelectClauses.Add(GetSQL<T>(tableAlias, "*"))
@@ -97,11 +103,11 @@ namespace SqlQueryBuilder
             return Where(GetFirstSQL<T>(table1Alias, lambda1), compare, GetFirstSQL<U>(table2Alias, lambda2));
         }
             
-        public IQueryBuilderWhere Where(Func<IWhereBuilderFactory, IWhereBuilder> build) =>
+        public IQueryBuilderWhere Where(Func<IWhereBuilderFactory, IWhereBuilder> createBuilder) =>
             SkipIfError(() =>
             {
                 var factory = new WhereFactory(Tables);
-                var success = build(factory).TryBuild(out var whereClause);
+                var success = createBuilder(factory).TryBuild(out var whereClause);
                 if (success == false)
                     HasError = true;
                 else

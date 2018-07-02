@@ -5,16 +5,16 @@ using System.Linq.Expressions;
 
 namespace SqlQueryBuilder
 {
-    public abstract class SqlStatementFactory
+    public abstract class SqlClauseFactory
     {
         protected bool HasError { get; set; } = false;
         protected readonly Dictionary<string, Type> Tables = new Dictionary<string, Type>();
 
-        protected SqlStatementFactory()
+        protected SqlClauseFactory()
         {
         }
 
-        protected SqlStatementFactory(Dictionary<string, Type> tables)
+        protected SqlClauseFactory(Dictionary<string, Type> tables)
         {
             foreach (var kv in tables)
                 Tables.Add(kv.Key, kv.Value);
