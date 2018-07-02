@@ -1,7 +1,6 @@
 # SqlQueryBuilder
-C# Library to build type safe T-SQL "select" queries around your POCO classes.
 
-### Main Features:
+### Main features:
   - Build all your "ReadBy" T-SQL queries arround your POCOs!
   - Fluent interface
   - Try-Build pattern (basic validation)
