@@ -1,7 +1,7 @@
 # SqlQueryBuilder
 
 ### Main features:
-  - Build all your "ReadBy" T-SQL queries arround your POCOs!
+  - Build all your ReadBy/Find T-SQL queries arround your POCOs!
   - Fluent interface
   - Try-Build pattern (basic validation)
   - Evaluate once: use parameters ("@param") within the builder to parametrize your queries!
@@ -42,7 +42,7 @@ const string TABLE2 = "MAKER2";
 var isValid = new SqlQueryBuilder().From<CarMaker>(TABLE1)
     .Join<CarMaker, CarMaker>(maker1 => maker1.CountryOfOriginId, maker2 => maker2.CountryOfOriginId, TABLE1, TABLE2)
     .SelectAll<CarMaker>(TABLE1)
-    .Where<CarMaker, CarMaker>(maker1 => maker1.Id, Compare.NEQ, maker2 => maker2.Id)
+    .Where<CarMaker, CarMaker>(maker1 => maker1.Id, Compare.NEQ, maker2 => maker2.Id, TABLE1, TABLE2)
     .TryBuild(out string query);
     
 ```
@@ -77,9 +77,7 @@ GROUP BY [Car].[ModelYear], [CarMaker].[Name]
 
 ### Where is the fun?
 
-People's car tastes can be all over the place, and so can be your "WHERE" clauses!
-
-Here are some "WHERE" conditions extracted as functions so we can use them later.
+People's car tastes can be all over the place, and so can be your "WHERE" clauses! Here are some "WHERE" conditions extracted as functions so we can use them later.
 ```c#
 private IWhereBuilder CheapCarCondition(IWhereBuilderFactory factory)
 {
