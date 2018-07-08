@@ -121,7 +121,7 @@ namespace SqlQueryBuilder
 
         public IQueryBuilderOrderBy OrderBy<T>(Expression<Func<T, object>> lambda, bool desc = false, string tableAlias = null) =>
             SkipIfError(() =>
-                OrderByClauses.Add($"{GetSQL<T>(tableAlias, lambda)}{(desc ? " DESC" : string.Empty)}")
+                OrderByClauses.Add($"{GetFirstSQL<T>(tableAlias, lambda)}{(desc ? " DESC" : string.Empty)}")
             );
 
         public bool TryBuild(out string query)

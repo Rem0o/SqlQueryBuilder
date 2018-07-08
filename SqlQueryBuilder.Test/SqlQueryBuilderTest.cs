@@ -16,11 +16,13 @@ namespace SqlQueryBuilder.Test
                 .Join<Car, CarMaker>(car => car.CarMakerId, maker => maker.Id)
                 .SelectAll<Car>()
                 .Where<CarMaker>(maker => maker.Name, Compare.EQ, "@brand")
+                .OrderBy<CarMaker>(maker => maker.FoundationDate, desc: true)
                 .TryBuild(out var query);
 
             Assert.True(isValid, "The query should be valid");
 
-            var expectedQuery = $"SELECT [Car].* FROM [Car] JOIN [CarMaker] ON [Car].[CarMakerId] = [CarMaker].[Id] WHERE ([CarMaker].[Name] = @brand)";
+            var expectedQuery = $"SELECT [Car].* FROM [Car] JOIN [CarMaker] ON [Car].[CarMakerId] = [CarMaker].[Id] "
+                + "WHERE ([CarMaker].[Name] = @brand) ORDER BY [CarMaker].[FoundationDate] DESC";
             Assert.True(CompareQueries(expectedQuery, query));
         }
 
