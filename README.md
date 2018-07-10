@@ -1,4 +1,4 @@
-# SqlQueryBuilder
+# SqlQueryBuilder [![Build Status](https://travis-ci.com/Rem0o/SqlQueryBuilder.svg?branch=master)](https://travis-ci.com/Rem0o/SqlQueryBuilder)
 
 ### Main features:
   - Build all your ReadBy/Find T-SQL queries arround your POCOs!
