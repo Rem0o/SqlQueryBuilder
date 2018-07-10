@@ -5,9 +5,9 @@ using System.Linq.Expressions;
 
 namespace SqlQueryBuilder
 {
-    public class SqlQueryBuilder : SqlClauseFactory, IQueryBuilderFrom, IQueryBuilderJoinOrSelect, IQueryBuilderSelect
+    public class SqlQueryBuilder : SqlTranslator, IQueryBuilderFrom, IQueryBuilderJoinOrSelect, IQueryBuilderSelect
     {
-        private Tuple<string, Type> TableFrom { get; set; }
+        private KeyValuePair<string, Type> TableFrom { get; set; }
         private List<string> SelectClauses = new List<string>();
         private List<string> SelectAggregateClauses = new List<string>();
         private List<string> WhereClauses = new List<string>();
@@ -27,8 +27,8 @@ namespace SqlQueryBuilder
         {
             var type = typeof(T);
             var tableAliasKey = tableAlias ?? type.Name;
-            TableFrom = new Tuple<string, Type>(tableAliasKey, type);
-            Tables.Add(tableAliasKey, type);
+            TableFrom = new KeyValuePair<string, Type>(tableAliasKey, type);
+            Tables.Add(TableFrom.Key, TableFrom.Value);
             return this;
         }
 
@@ -48,7 +48,7 @@ namespace SqlQueryBuilder
 
             var joinTypeStr = (string.IsNullOrEmpty(joinType) ? string.Empty : $"{joinType} ") + "JOIN";
             var joinTableStr = $"[{joinTable2Type.Name}]" + (!string.IsNullOrEmpty(table2Alias) ? $" AS [{table2Alias}]" : string.Empty);
-            var joinOnStr = $"{GetFirstSQL<T>(table1Alias, key1)} = {GetFirstSQL<T>(joinTable2Name, key2)}";
+            var joinOnStr = $"{GetFirstSQL<T>(key1, table1Alias)} = {GetFirstSQL<T>(key2, joinTable2Name)}";
             var joinClause = $"{joinTypeStr} {joinTableStr} ON {joinOnStr}";
 
             JoinClauses.Add(joinClause);
@@ -74,17 +74,17 @@ namespace SqlQueryBuilder
 
         public IQueryBuilderSelect SelectAll<T>(string tableAlias = null) =>
             SkipIfError(() =>
-                SelectClauses.Add(GetSQL<T>(tableAlias, "*"))
+                SelectClauses.Add(GetSQL<T>("*", tableAlias))
             );
 
         public IQueryBuilderSelect Select<T>(Expression<Func<T, object>> lambda, string tableAlias = null) =>
             SkipIfError(() =>
-                SelectClauses.AddRange(GetSQL<T>(tableAlias, lambda))
+                SelectClauses.AddRange(GetSQL<T>(lambda, tableAlias))
             );
 
         public IQueryBuilderSelect SelectAggregateAs<T>(string aggregationFunc, Expression<Func<T, object>> lambda, string propertyAs, string tableAlias = null) =>
             SkipIfError(() =>
-                SelectAggregateClauses.Add($"{aggregationFunc}({GetFirstSQL<T>(tableAlias, lambda)}) AS [{propertyAs}]")
+                SelectAggregateClauses.Add($"{aggregationFunc}({GetFirstSQL<T>(lambda, tableAlias)}) AS [{propertyAs}]")
             );
 
         private IQueryBuilderWhere Where(string value1, string compare, string value2) =>
@@ -94,19 +94,19 @@ namespace SqlQueryBuilder
 
         public IQueryBuilderWhere Where<T>(Expression<Func<T, object>> lambda, string compare, string value, string tableAlias = null)
         {
-            return Where(GetFirstSQL<T>(tableAlias, lambda), compare, value);
+            return Where(GetFirstSQL<T>(lambda, tableAlias), compare, value);
         }
             
         public IQueryBuilderWhere Where<T, U>(Expression<Func<T, object>> lambda1, string compare, Expression<Func<U, object>> lambda2,
             string table1Alias = null, string table2Alias = null)
         {
-            return Where(GetFirstSQL<T>(table1Alias, lambda1), compare, GetFirstSQL<U>(table2Alias, lambda2));
+            return Where(GetFirstSQL<T>(lambda1, table1Alias), compare, GetFirstSQL<U>(lambda2, table2Alias));
         }
             
         public IQueryBuilderWhere Where(Func<IWhereBuilderFactory, IWhereBuilder> createBuilder) =>
             SkipIfError(() =>
             {
-                var factory = new WhereFactory(Tables);
+                var factory = new WhereBuilderFactory(Tables);
                 var success = createBuilder(factory).TryBuild(out var whereClause);
                 if (success == false)
                     HasError = true;
@@ -116,12 +116,12 @@ namespace SqlQueryBuilder
 
         public IQueryBuilderGroupBy GroupBy<T>(Expression<Func<T, object>> lambda, string tableAlias = null) =>
             SkipIfError(() =>
-                GroupByClauses.Add(GetFirstSQL<T>(tableAlias, lambda))
+                GroupByClauses.Add(GetFirstSQL<T>(lambda, tableAlias))
             );
 
         public IQueryBuilderOrderBy OrderBy<T>(Expression<Func<T, object>> lambda, bool desc = false, string tableAlias = null) =>
             SkipIfError(() =>
-                OrderByClauses.Add($"{GetFirstSQL<T>(tableAlias, lambda)}{(desc ? " DESC" : string.Empty)}")
+                OrderByClauses.Add($"{GetFirstSQL<T>(lambda, tableAlias)}{(desc ? " DESC" : string.Empty)}")
             );
 
         public bool TryBuild(out string query)
@@ -131,13 +131,13 @@ namespace SqlQueryBuilder
             if (Validate() == false)
                 return false;
 
-            var tableName = TableFrom.Item2.Name;
-            var tableAlias = TableFrom.Item1;
+            var tableName = TableFrom.Value.Name;
+            var tableAlias = TableFrom.Key;
 
             const string separator = ", ";
             var selectString = string.Join(separator, SelectAggregateClauses.Concat(SelectClauses));
 
-            query = $"SELECT {selectString} FROM [{tableName}] {(tableAlias != tableName ? $"AS [{TableFrom.Item1}] " : string.Empty)}"
+            query = $"SELECT {selectString} FROM [{tableName}] {(tableAlias != tableName ? $"AS [{tableAlias}] " : string.Empty)}"
                 + (JoinClauses.Count > 0 ? string.Join(" ", JoinClauses) + " " : string.Empty)
                 + (WhereClauses.Count > 0 ? $"WHERE {string.Join(" AND ", WhereClauses)} " : string.Empty)
                 + (GroupByClauses.Count > 0 ? $"GROUP BY {string.Join(separator, GroupByClauses)} " : string.Empty)

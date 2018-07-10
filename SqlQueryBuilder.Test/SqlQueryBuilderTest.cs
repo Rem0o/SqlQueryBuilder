@@ -165,8 +165,8 @@ namespace SqlQueryBuilder.Test
                 {"CarMaker", typeof(CarMaker) }
             };
 
-            var factory = new WhereFactory(mapper);
-            var whereIsValid = CountryCondition(new WhereFactory(mapper))
+            var factory = new WhereBuilderFactory(mapper);
+            var whereIsValid = CountryCondition(new WhereBuilderFactory(mapper))
                 .TryBuild(out _);
 
             Assert.False(whereIsValid, "The where clause needs to be invalid");

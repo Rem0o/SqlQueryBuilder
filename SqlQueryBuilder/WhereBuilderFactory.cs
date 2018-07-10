@@ -5,24 +5,24 @@ using System.Linq.Expressions;
 
 namespace SqlQueryBuilder
 {
-    public class WhereFactory: SqlClauseFactory, IWhereBuilderFactory, IWhereBuilder
+    public class WhereBuilderFactory: SqlTranslator, IWhereBuilderFactory, IWhereBuilder
     {
         private string _whereClause { get; set; }
 
-        public WhereFactory(Dictionary<string, Type> tables) : base(tables)
+        public WhereBuilderFactory(Dictionary<string, Type> tables) : base(tables)
         {
         }
 
         public IWhereBuilder Compare<T>(Expression<Func<T, object>> lambda, string compare, string value, string tableAlias = null)
         {
-            _whereClause = $"(({GetFirstSQL<T>(tableAlias, lambda)}) {compare} ({value}))";
+            _whereClause = $"(({GetFirstSQL<T>(lambda, tableAlias)}) {compare} ({value}))";
             return this;
         }
 
         public IWhereBuilder Compare<T, U>(Expression<Func<T, object>> lambda1, string compare, Expression<Func<U, object>> lambda2,
             string table1Alias = null, string table2Alias = null)
         {
-            return Compare(lambda1, compare, GetFirstSQL<T>(table2Alias, lambda2), table1Alias);
+            return Compare(lambda1, compare, GetFirstSQL<T>(lambda2, table2Alias), table1Alias);
         }
 
         public IWhereBuilder Or(params Func<IWhereBuilderFactory, IWhereBuilder>[] conditions) => JoinConditions("OR", conditions);
@@ -32,7 +32,7 @@ namespace SqlQueryBuilder
         private IWhereBuilder JoinConditions(string compare, params Func<IWhereBuilderFactory, IWhereBuilder>[] clauses)
         {
             var clauseResults = clauses.Select(condition => {
-                var success = condition(new WhereFactory(Tables)).TryBuild(out string whereClause);
+                var success = condition(new WhereBuilderFactory(Tables)).TryBuild(out string whereClause);
                 return new { success, whereClause };
             });
 

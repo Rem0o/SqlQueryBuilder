@@ -13,7 +13,7 @@ namespace SqlQueryBuilder.Test
         {
             Dictionary<string, Type> mapper = GetMapper();
 
-            var builder = new WhereFactory(mapper).Or(
+            var builder = new WhereBuilderFactory(mapper).Or(
                 CheapCarCondition,
                 SweetSpotLexusCondition
             );
@@ -38,7 +38,7 @@ namespace SqlQueryBuilder.Test
                 f => f.Compare<Country>(country => country.Name, Compare.NEQ, "USA")
              );
 
-            var builder = new WhereFactory(mapper).Or(
+            var builder = new WhereBuilderFactory(mapper).Or(
                 CheapNonAmericanCondition,
                 SweetSpotLexusCondition
             );

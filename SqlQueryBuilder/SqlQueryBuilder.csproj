@@ -2,6 +2,11 @@
 
   <PropertyGroup>
     <TargetFramework>netstandard2.0</TargetFramework>
+    <Description>Simple builder interface to build SQL select queries arround your POCO classes.</Description>
+    <Product />
+    <Authors>Rémi Mercier</Authors>
+    <Company>SqlQueryBuilder</Company>
+    <GeneratePackageOnBuild>true</GeneratePackageOnBuild>
   </PropertyGroup>
 
 </Project>
