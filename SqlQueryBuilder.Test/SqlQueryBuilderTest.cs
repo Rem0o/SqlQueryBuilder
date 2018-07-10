@@ -158,15 +158,12 @@ namespace SqlQueryBuilder.Test
 
         [Fact]
         public void WhereBuilderValidity_Affect_QueryValidity()
-        {
-            var mapper = new Dictionary<string, Type>()
-            {
-                {"Car", typeof(Car) },
-                {"CarMaker", typeof(CarMaker) }
-            };
+        { 
+            var translator = new SqlTranslator();
+            translator.AddTranslation<Car>("Car");
+            translator.AddTranslation<CarMaker>("CarMaker");
 
-            var factory = new WhereBuilderFactory(mapper);
-            var whereIsValid = CountryCondition(new WhereBuilderFactory(mapper))
+            var whereIsValid = CountryCondition(new WhereBuilderFactory(translator))
                 .TryBuild(out _);
 
             Assert.False(whereIsValid, "The where clause needs to be invalid");

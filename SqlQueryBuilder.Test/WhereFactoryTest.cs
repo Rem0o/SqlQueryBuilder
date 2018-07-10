@@ -11,9 +11,9 @@ namespace SqlQueryBuilder.Test
         [Fact]
         public void Or_WithinMapper_Valid()
         {
-            Dictionary<string, Type> mapper = GetMapper();
+            var translator = GetTranslator();
 
-            var builder = new WhereBuilderFactory(mapper).Or(
+            var builder = new WhereBuilderFactory(translator).Or(
                 CheapCarCondition,
                 SweetSpotLexusCondition
             );
@@ -29,8 +29,7 @@ namespace SqlQueryBuilder.Test
         [Fact]
         public void Or_NotWithinMapper_Invalid()
         {
-            var mapper = GetMapper();
-            Assert.True(mapper.Where(x => x.Value == typeof(Country)).Count() == 0, "Country should not be in the mapper");
+            var translator = GetTranslator();
 
             IWhereBuilder CheapNonAmericanCondition(IWhereBuilderFactory factory) => factory.And(
                 CheapCarCondition,
@@ -38,7 +37,7 @@ namespace SqlQueryBuilder.Test
                 f => f.Compare<Country>(country => country.Name, Compare.NEQ, "USA")
              );
 
-            var builder = new WhereBuilderFactory(mapper).Or(
+            var builder = new WhereBuilderFactory(translator).Or(
                 CheapNonAmericanCondition,
                 SweetSpotLexusCondition
             );
@@ -72,13 +71,12 @@ namespace SqlQueryBuilder.Test
             );
         }
 
-        private static Dictionary<string, Type> GetMapper()
+        private static SqlTranslator GetTranslator()
         {
-            return new Dictionary<string, Type>()
-            {
-                {"Car", typeof(Car) },
-                {"CarMaker", typeof(CarMaker) }
-            };
+            var translator = new SqlTranslator();
+            translator.AddTranslation<Car>("Car");
+            translator.AddTranslation<CarMaker>("CarMaker");
+            return translator;
         }
     }
 }

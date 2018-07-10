@@ -5,24 +5,27 @@ using System.Linq.Expressions;
 
 namespace SqlQueryBuilder
 {
-    public class WhereBuilderFactory: SqlTranslator, IWhereBuilderFactory, IWhereBuilder
+    public class WhereBuilderFactory: IWhereBuilderFactory, IWhereBuilder
     {
+        private readonly SqlTranslator translator;
+
         private string _whereClause { get; set; }
 
-        public WhereBuilderFactory(Dictionary<string, Type> tables) : base(tables)
+        public WhereBuilderFactory(SqlTranslator translator)
         {
+            this.translator = translator;
         }
 
         public IWhereBuilder Compare<T>(Expression<Func<T, object>> lambda, string compare, string value, string tableAlias = null)
         {
-            _whereClause = $"(({GetFirstSQL<T>(lambda, tableAlias)}) {compare} ({value}))";
+            _whereClause = $"(({translator.GetFirstTranslation<T>(lambda, tableAlias)}) {compare} ({value}))";
             return this;
         }
 
         public IWhereBuilder Compare<T, U>(Expression<Func<T, object>> lambda1, string compare, Expression<Func<U, object>> lambda2,
             string table1Alias = null, string table2Alias = null)
         {
-            return Compare(lambda1, compare, GetFirstSQL<T>(lambda2, table2Alias), table1Alias);
+            return Compare(lambda1, compare, translator.GetFirstTranslation<U>(lambda2, table2Alias), table1Alias);
         }
 
         public IWhereBuilder Or(params Func<IWhereBuilderFactory, IWhereBuilder>[] conditions) => JoinConditions("OR", conditions);
@@ -32,13 +35,12 @@ namespace SqlQueryBuilder
         private IWhereBuilder JoinConditions(string compare, params Func<IWhereBuilderFactory, IWhereBuilder>[] clauses)
         {
             var clauseResults = clauses.Select(condition => {
-                var success = condition(new WhereBuilderFactory(Tables)).TryBuild(out string whereClause);
+                var success = condition(new WhereBuilderFactory(translator)).TryBuild(out string whereClause);
                 return new { success, whereClause };
             });
 
             if (clauseResults.Any(x => x.success == false))
             {
-                HasError = true;
                 _whereClause = "";
                 return this;
             }
@@ -50,7 +52,7 @@ namespace SqlQueryBuilder
         public bool TryBuild(out string whereClause)
         {
             whereClause = "";
-            if (HasError)
+            if (translator.HasError)
                 return false;
 
             whereClause = _whereClause;

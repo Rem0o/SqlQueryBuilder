@@ -5,22 +5,28 @@ using System.Linq.Expressions;
 
 namespace SqlQueryBuilder
 {
-    public abstract class SqlTranslator
+    public class SqlTranslator : ISqlTranslator
     {
-        protected bool HasError { get; set; } = false;
-        protected readonly Dictionary<string, Type> Tables = new Dictionary<string, Type>();
+        public bool HasError { get; private set; } = false;
+        private readonly Dictionary<string, Type> Tables = new Dictionary<string, Type>();
 
-        protected SqlTranslator()
+        public SqlTranslator()
         {
         }
 
-        protected SqlTranslator(Dictionary<string, Type> tables)
+        public bool AddTranslation<T>(string key)
         {
-            foreach (var kv in tables)
-                Tables.Add(kv.Key, kv.Value);
+            if (Tables.ContainsKey(key))
+            {
+                HasError = true;
+                return false;
+            }
+                
+            Tables.Add(key, typeof(T));
+            return true;
         }
 
-        protected string GetSQL<T>(string col, string tableAlias)
+        public string Translate<T>(string col, string tableAlias)
         {
             KeyValuePair<string, Type> kv = Tables.FirstOrDefault(x =>
             {
@@ -39,14 +45,14 @@ namespace SqlQueryBuilder
             }
         }
 
-        protected IEnumerable<string> GetSQL<T>(Expression expression, string tableName)
+        public IEnumerable<string> Translate<T>(Expression<Func<T, object>> lambda, string tableName)
         {
-            return NameOf(expression).Select(x => GetSQL<T>(x, tableName));
+            return NameOf(lambda).Select(x => Translate<T>(x, tableName));
         }
-            
-        protected string GetFirstSQL<T>(Expression expression, string tableName)
+
+        public string GetFirstTranslation<T>(Expression<Func<T, object>> lambda, string tableName)
         {
-            return NameOf(expression).Select(x => GetSQL<T>(x, tableName)).FirstOrDefault();
+            return NameOf(lambda).Select(x => Translate<T>(x, tableName)).FirstOrDefault();
         }
 
         private IEnumerable<string> NameOf(Expression expression)
