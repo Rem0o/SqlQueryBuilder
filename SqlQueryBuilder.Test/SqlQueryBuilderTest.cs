@@ -118,6 +118,20 @@ namespace SqlQueryBuilder.Test
             Assert.False(isValid, "An aggregation query with a select item not in any group by clauses should not be valid");
         }
 
+        [Theory]
+        [InlineData(10, true)]
+        [InlineData(0, true)]
+        [InlineData(-1, false)]
+        public void SelectTop_Integer_PositiveOnly(int top, bool valid)
+        {
+            var isValid = GetBuilder().From<CarMaker>()
+                .Top(top)
+                .Select<CarMaker>(maker => new { maker.FoundationDate, maker.Name })
+                .TryBuild(out _);
+
+            Assert.True(isValid == valid);
+        }
+
         [Fact]
         public void JoinSamePOCO_WithoutAlias_InvalidQuery()
         {
@@ -160,8 +174,8 @@ namespace SqlQueryBuilder.Test
         public void WhereBuilderValidity_Affect_QueryValidity()
         { 
             var translator = new SqlTranslator();
-            translator.AddTranslation<Car>("Car");
-            translator.AddTranslation<CarMaker>("CarMaker");
+            translator.AddTable<Car>("Car");
+            translator.AddTable<CarMaker>("CarMaker");
 
             var whereIsValid = CountryCondition(new WhereBuilderFactory(translator))
                 .TryBuild(out _);

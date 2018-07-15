@@ -74,8 +74,8 @@ namespace SqlQueryBuilder.Test
         private static SqlTranslator GetTranslator()
         {
             var translator = new SqlTranslator();
-            translator.AddTranslation<Car>("Car");
-            translator.AddTranslation<CarMaker>("CarMaker");
+            translator.AddTable<Car>("Car");
+            translator.AddTable<CarMaker>("CarMaker");
             return translator;
         }
     }

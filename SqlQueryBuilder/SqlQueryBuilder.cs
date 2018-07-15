@@ -9,6 +9,7 @@ namespace SqlQueryBuilder
     {
         private KeyValuePair<string, Type> TableFrom { get; set; }
         private SqlTranslator Translator = new SqlTranslator();
+        private int TopClause = 0;
         private List<string> SelectClauses = new List<string>();
         private List<string> SelectAggregateClauses = new List<string>();
         private List<string> WhereClauses = new List<string>();
@@ -30,7 +31,7 @@ namespace SqlQueryBuilder
             var tableAliasKey = tableAlias ?? type.Name;
             TableFrom = new KeyValuePair<string, Type>(tableAliasKey, type);
 
-            Translator.AddTranslation<T>(TableFrom.Key);
+            Translator.AddTable<T>(TableFrom.Key);
             return this;
         }
 
@@ -40,7 +41,7 @@ namespace SqlQueryBuilder
             var joinTable2Type = typeof(U);
             var joinTable2Name = string.IsNullOrEmpty(table2Alias) ? joinTable2Type.Name : table2Alias;
 
-            if (Translator.AddTranslation<U>(joinTable2Name) == false)
+            if (Translator.AddTable<U>(joinTable2Name) == false)
                 return;
 
             var joinTypeStr = (string.IsNullOrEmpty(joinType) ? string.Empty : $"{joinType} ") + "JOIN";
@@ -69,6 +70,11 @@ namespace SqlQueryBuilder
             return Join(key1, key2, table1Alias, table2Alias, "FULL OUTER");
         }
 
+        public IQueryBuilderSelect Top(int i) => SkipIfError(() =>
+        {
+            TopClause = i;
+        });
+        
         public IQueryBuilderSelect SelectAll<T>(string tableAlias = null) =>
             SkipIfError(() =>
                 SelectClauses.Add(Translator.Translate<T>("*", tableAlias))
@@ -132,7 +138,7 @@ namespace SqlQueryBuilder
             const string separator = ", ";
             var selectString = string.Join(separator, SelectAggregateClauses.Concat(SelectClauses));
 
-            query = $"SELECT {selectString} FROM [{tableName}] {(tableAlias != tableName ? $"AS [{tableAlias}] " : string.Empty)}"
+            query = $"SELECT {(TopClause > 0 ? $"{TopClause} ": "")}{selectString} FROM [{tableName}] {(tableAlias != tableName ? $"AS [{tableAlias}] " : string.Empty)}"
                 + (JoinClauses.Count > 0 ? string.Join(" ", JoinClauses) + " " : string.Empty)
                 + (WhereClauses.Count > 0 ? $"WHERE {string.Join(" AND ", WhereClauses)} " : string.Empty)
                 + (GroupByClauses.Count > 0 ? $"GROUP BY {string.Join(separator, GroupByClauses)} " : string.Empty)
@@ -144,6 +150,12 @@ namespace SqlQueryBuilder
         private bool Validate()
         {
             if (Translator.HasError)
+                return false;
+
+            if (SelectClauses.Count == 0)
+                return false;
+
+            if (TopClause < 0)
                 return false;
 
             var missingGroupBy = SelectAggregateClauses.Count > 0 && SelectClauses

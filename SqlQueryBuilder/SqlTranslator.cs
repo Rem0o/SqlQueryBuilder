@@ -14,15 +14,15 @@ namespace SqlQueryBuilder
         {
         }
 
-        public bool AddTranslation<T>(string key)
+        public bool AddTable<T>(string tableAlias)
         {
-            if (Tables.ContainsKey(key))
+            if (Tables.ContainsKey(tableAlias))
             {
                 HasError = true;
                 return false;
             }
                 
-            Tables.Add(key, typeof(T));
+            Tables.Add(tableAlias, typeof(T));
             return true;
         }
 
