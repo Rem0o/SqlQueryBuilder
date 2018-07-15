@@ -120,6 +120,7 @@ namespace SqlQueryBuilder.Test
 
         [Theory]
         [InlineData(10, true)]
+        [InlineData(1, true)]
         [InlineData(0, true)]
         [InlineData(-1, false)]
         public void SelectTop_Integer_PositiveOnly(int top, bool valid)
@@ -127,9 +128,13 @@ namespace SqlQueryBuilder.Test
             var isValid = GetBuilder().From<CarMaker>()
                 .Top(top)
                 .Select<CarMaker>(maker => new { maker.FoundationDate, maker.Name })
-                .TryBuild(out _);
+                .TryBuild(out var query);
+
+            var expectedQuery = $"SELECT {(top > 0 ? $"TOP {top} ": string.Empty)}[CarMaker].[FoundationDate], [CarMaker].[Name] FROM [CarMaker]";
 
             Assert.True(isValid == valid);
+            if (isValid)
+                Assert.True(expectedQuery == query);
         }
 
         [Fact]

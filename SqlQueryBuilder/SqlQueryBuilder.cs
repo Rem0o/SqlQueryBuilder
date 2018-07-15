@@ -138,11 +138,13 @@ namespace SqlQueryBuilder
             const string separator = ", ";
             var selectString = string.Join(separator, SelectAggregateClauses.Concat(SelectClauses));
 
-            query = $"SELECT {(TopClause > 0 ? $"{TopClause} ": "")}{selectString} FROM [{tableName}] {(tableAlias != tableName ? $"AS [{tableAlias}] " : string.Empty)}"
+            query = $"SELECT {(TopClause > 0 ? $"TOP {TopClause} ": "")}{selectString} FROM [{tableName}] {(tableAlias != tableName ? $"AS [{tableAlias}] " : string.Empty)}"
                 + (JoinClauses.Count > 0 ? string.Join(" ", JoinClauses) + " " : string.Empty)
                 + (WhereClauses.Count > 0 ? $"WHERE {string.Join(" AND ", WhereClauses)} " : string.Empty)
                 + (GroupByClauses.Count > 0 ? $"GROUP BY {string.Join(separator, GroupByClauses)} " : string.Empty)
                 + (OrderByClauses.Count > 0 ? $"ORDER BY {string.Join(separator, OrderByClauses)} " : string.Empty);
+
+            query = query.Trim();
 
             return true;
         }
