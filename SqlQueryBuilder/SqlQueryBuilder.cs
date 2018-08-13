@@ -8,10 +8,9 @@ namespace SqlQueryBuilder
     public class SqlQueryBuilder : IQueryBuilderFrom, IQueryBuilderJoinOrSelect, IQueryBuilderSelect
     {
         private KeyValuePair<string, Type> TableFrom { get; set; }
-        private SqlTranslator Translator = new SqlTranslator();
+        private ISqlTranslator Translator = new SqlTranslator();
         private int TopClause = 0;
         private List<string> SelectClauses = new List<string>();
-        private List<string> SelectAggregateClauses = new List<string>();
         private List<string> WhereClauses = new List<string>();
         private List<string> JoinClauses = new List<string>();
         private List<string> OrderByClauses = new List<string>();
@@ -46,7 +45,7 @@ namespace SqlQueryBuilder
 
             var joinTypeStr = (string.IsNullOrEmpty(joinType) ? string.Empty : $"{joinType} ") + "JOIN";
             var joinTableStr = $"[{joinTable2Type.Name}]" + (!string.IsNullOrEmpty(table2Alias) ? $" AS [{table2Alias}]" : string.Empty);
-            var joinOnStr = $"{Translator.GetFirstTranslation<T>(key1, table1Alias)} = {Translator.GetFirstTranslation<U>(key2, joinTable2Name)}";
+            var joinOnStr = $"{Translator.GetFirstTranslation(key1, table1Alias)} = {Translator.GetFirstTranslation(key2, joinTable2Name)}";
             var joinClause = $"{joinTypeStr} {joinTableStr} ON {joinOnStr}";
 
             JoinClauses.Add(joinClause);
@@ -82,47 +81,39 @@ namespace SqlQueryBuilder
 
         public IQueryBuilderSelect Select<T>(Expression<Func<T, object>> lambda, string tableAlias = null) =>
             SkipIfError(() =>
-                SelectClauses.AddRange(Translator.Translate<T>(lambda, tableAlias))
+                SelectClauses.AddRange(Translator.Translate(lambda, tableAlias))
             );
 
-        public IQueryBuilderSelect SelectAggregateAs<T>(string aggregationFunc, Expression<Func<T, object>> lambda, string propertyAs, string tableAlias = null) =>
-            SkipIfError(() =>
-                SelectAggregateClauses.Add($"{aggregationFunc}({Translator.GetFirstTranslation<T>(lambda, tableAlias)}) AS [{propertyAs}]")
-            );
-
-        private IQueryBuilderWhere Where(string value1, string compare, string value2) =>
-            SkipIfError(() =>
-                WhereClauses.Add($"({value1} {compare} {value2})")
-            );
-
-        public IQueryBuilderWhere Where<T>(Expression<Func<T, object>> lambda, string compare, string value, string tableAlias = null)
-        {
-            return Where(Translator.GetFirstTranslation<T>(lambda, tableAlias), compare, value);
-        }
-            
-        public IQueryBuilderWhere Where<T, U>(Expression<Func<T, object>> lambda1, string compare, Expression<Func<U, object>> lambda2,
-            string table1Alias = null, string table2Alias = null)
-        {
-            return Where(Translator.GetFirstTranslation<T>(lambda1, table1Alias), compare, Translator.GetFirstTranslation<U>(lambda2, table2Alias));
-        }
-            
-        public IQueryBuilderWhere Where(Func<IWhereBuilderFactory, IWhereBuilder> createBuilder) =>
+        public IQueryBuilderSelect SelectAs(Func<ISqlTranslator, ISelectBuilder> selectBuilderFactory, string alias) =>
             SkipIfError(() =>
             {
-                var factory = new WhereBuilderFactory(Translator);
-                var success = createBuilder(factory).TryBuild(out var whereClause);
-                if (success == true)
-                    WhereClauses.Add(whereClause);
+                var success = selectBuilderFactory(Translator)
+                    .TryBuild(out string selectClause);
+                if (success)
+                    SelectClauses.Add($"{selectClause} AS [{alias}]");
+            });
+
+        public IQueryBuilderWhere Where(Func<ICompare, string> compareFactory) =>
+            SkipIfError(() =>
+                WhereClauses.Add(compareFactory(new Comparator(Translator)))
+            );
+            
+        public IQueryBuilderWhere WhereFactory(Func<ISqlTranslator, IWhereBuilder> createBuilder) =>
+            SkipIfError(() =>
+            {
+                var success = createBuilder(Translator).TryBuild(out var whereClause);
+                if (success)
+                    WhereClauses.Add(whereClause); 
             });
 
         public IQueryBuilderGroupBy GroupBy<T>(Expression<Func<T, object>> lambda, string tableAlias = null) =>
             SkipIfError(() =>
-                GroupByClauses.Add(Translator.GetFirstTranslation<T>(lambda, tableAlias))
+                GroupByClauses.Add(Translator.GetFirstTranslation(lambda, tableAlias))
             );
 
         public IQueryBuilderOrderBy OrderBy<T>(Expression<Func<T, object>> lambda, bool desc = false, string tableAlias = null) =>
             SkipIfError(() =>
-                OrderByClauses.Add($"{Translator.GetFirstTranslation<T>(lambda, tableAlias)}{(desc ? " DESC" : string.Empty)}")
+                OrderByClauses.Add($"{Translator.GetFirstTranslation(lambda, tableAlias)}{(desc ? " DESC" : string.Empty)}")
             );
 
         public bool TryBuild(out string query)
@@ -136,7 +127,7 @@ namespace SqlQueryBuilder
             var tableAlias = TableFrom.Key;
 
             const string separator = ", ";
-            var selectString = string.Join(separator, SelectAggregateClauses.Concat(SelectClauses));
+            var selectString = string.Join(separator, SelectClauses);
 
             query = $"SELECT {(TopClause > 0 ? $"TOP {TopClause} ": "")}{selectString} FROM [{tableName}] {(tableAlias != tableName ? $"AS [{tableAlias}] " : string.Empty)}"
                 + (JoinClauses.Count > 0 ? string.Join(" ", JoinClauses) + " " : string.Empty)
@@ -158,12 +149,6 @@ namespace SqlQueryBuilder
                 return false;
 
             if (TopClause < 0)
-                return false;
-
-            var missingGroupBy = SelectAggregateClauses.Count > 0 && SelectClauses
-                .Any(select => GroupByClauses.Any(group => select.Contains(group)) == false);
-
-            if (missingGroupBy)
                 return false;
 
             return true;

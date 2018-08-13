@@ -8,7 +8,7 @@
   
 ### Other features
   - Build your complex "WHERE" clauses as sub-blocks you can assemble
-  - Supports aggregates (with validation for "GROUP BY" clauses)
+  - Use complex selectors like aggregates and SQL functions by inheriting the SelectBuilder class.
   - Supports table name alias (when you join the same table multiple times)
 
 ## Code exemples
@@ -19,7 +19,7 @@ Simply write your query with terms you are familiar with.
 ```c#
 bool isValid = new SqlQueryBuilder().From<Car>()
     .SelectAll<Car>()
-    .Where<Car>(car => car.ModelYear, Compare.GT, "@year")
+    .Where(comparator => comparator.Compare<Car>(car => car.ModelYear).With(Operators.GT, "@year"))
     .TryBuild(out string query);
     
 //@year can later be replaced with your favorite library
@@ -42,7 +42,7 @@ const string TABLE2 = "MAKER2";
 var isValid = new SqlQueryBuilder().From<CarMaker>(TABLE1)
     .Join<CarMaker, CarMaker>(maker1 => maker1.CountryOfOriginId, maker2 => maker2.CountryOfOriginId, TABLE1, TABLE2)
     .SelectAll<CarMaker>(TABLE1)
-    .Where<CarMaker, CarMaker>(maker1 => maker1.Id, Compare.NEQ, maker2 => maker2.Id, TABLE1, TABLE2)
+    .Where(comparator => comparator.Compare<CarMaker>(maker1 => maker1.Id, TABLE1).With<CarMaker>(Operators.NEQ, maker2 => maker2.Id, TABLE2))
     .TryBuild(out string query);
     
 ```
@@ -56,13 +56,13 @@ WHERE [Maker1].[Id] <> [Maker2].Id
 
 ### A more complex query
 
-Here is a more complex query. As it is an aggregate query (AVG), every non-aggregate select statement is validated so it has a corresponding "GROUP BY" statement.
+Here is a more complex query. Note the use of a complex selector (average aggregate).
 ```c#
 var isValid = new SqlQueryBuilder().From<Car>()
     .Join<Car, CarMaker>(car => car.CarMakerId, maker => maker.Id)
-    .Select<CarMaker>(maker => maker.Name) // .GroupBy<Car>(car => car.ModelYear)
-    .Select<Car>(car => car.ModelYear) // .GroupBy<CarMaker>(maker => maker.Name)
-    .SelectAggregateAs<Car>(AggregateFunctions.AVG, car => car.Price, "AveragePrice")
+    .Select<CarMaker>(maker => maker.Name)
+    .Select<Car>(car => car.ModelYear)
+    .SelectAs(t => new Aggregate(AggregateFunctions.AVG, t).Select<Car>(car => car.Price), "AveragePrice")
     .GroupBy<Car>(car => car.ModelYear)
     .GroupBy<CarMaker>(maker => maker.Name)
     .TryBuild(out string query);
@@ -73,6 +73,38 @@ SELECT AVG([Car].[Price]) AS [AveragePrice], [CarMaker].[Name], [Car].[ModelYear
 FROM [Car]
 JOIN [CarMaker] ON [Car].[CarMakerId] = [CarMaker].[Id]
 GROUP BY [Car].[ModelYear], [CarMaker].[Name]
+```
+
+A complex selector is described as a class. Simply inherit SelectBuilder<T> to create your own easily. The generic <T> will enforce (or not using object) a specific type on your special selector. For example, here is a DATEDIFF implementation that requires the selector to be of a DateTime type.
+```c#
+//definition
+public class DateDiff : SelectBuilder<DateTime>
+{
+    private readonly DateDiffType type;
+    private readonly DateTime compareTo;
+
+    public DateDiff(DateDiffType type, DateTime compareTo, ISqlTranslator translator) : base(translator)
+    {
+        this.type = type;
+        this.compareTo = compareTo;
+    }
+
+    protected override string BuildSelectClause(string column)
+    {
+        return $"DATEDIFF({type.ToString()}, '{compareTo.ToString("yyyy-MM-dd")}', {column})";
+    }
+}
+
+// (...)
+
+// usage
+new DateDiff(DateDiffType.YEAR, new DateTime(2018,1,1), translator)
+    .Select<CarMaker>(maker => maker.FoundationDate);
+```
+
+Resulting SQL:
+```sql
+DATEDIFF(YEAR, '2018-01-01', [CarMaker].[FoundationDate])
 ```
 
 ### Where is the fun?
@@ -91,7 +123,7 @@ private IWhereBuilder CheapCarCondition(IWhereBuilderFactory factory)
 
 private IWhereBuilder DreamCarExceptionCondition(IWhereBuilderFactory factory)
 {
-    return factory.And(
+    return new WhereBuilderFactory(.And(
         f => f.Compare<Car>(car => car.Mileage, Compare.LT, "@dream_mileage"),
         f => f.Compare<Car>(car => car.Price, Compare.LT, "@dream_price"),
         f => f.Compare<CarMaker>(maker => maker.Name, Compare.EQ, "@dream_maker"),
@@ -105,7 +137,7 @@ var isValid = new SqlQueryBuilder().From<Car>()
     .Join<Car, CarMaker>(car => car.CarMakerId, maker => maker.Id)
     .Join<CarMaker, Country>(maker => maker.CountryOfOriginId, country => country.Id)
     .Select<Car>(car => new { car.Id, car.Price })
-    .Where(factory => factory.Or(
+    .WhereFactory(t => new WhereBuilderFactory(t).Or(
         CheapCarCondition,
         DreamCarExceptionCondition
     ))

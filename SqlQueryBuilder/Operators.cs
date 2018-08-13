@@ -1,6 +1,6 @@
 ﻿namespace SqlQueryBuilder
 {
-    public static class Compare
+    public static class Operators
     {
         public const string GT = ">";
         public const string GTE = ">=";

@@ -34,7 +34,7 @@ namespace SqlQueryBuilder.Test
             IWhereBuilder CheapNonAmericanCondition(IWhereBuilderFactory factory) => factory.And(
                 CheapCarCondition,
                 // FAIL CONDITION: The "Country" table is not in the mapper
-                f => f.Compare<Country>(country => country.Name, Compare.NEQ, "USA")
+                f => f.Compare(c => c.Compare<Country>(country => country.Name).With(Operators.NEQ, "USA"))
              );
 
             var builder = new WhereBuilderFactory(translator).Or(
@@ -51,8 +51,8 @@ namespace SqlQueryBuilder.Test
         private IWhereBuilder CheapCarCondition(IWhereBuilderFactory factory)
         {
             return factory.And(
-                f => f.Compare<Car>(car => car.Mileage, Compare.LT, CHEAPCAR_MILEAGE),
-                f => f.Compare<Car>(car => car.Price, Compare.LT, CHEAPCAR_PRICE)
+                f => f.Compare(c => c.Compare<Car>(car => car.Mileage).With(Operators.LT, CHEAPCAR_MILEAGE)),
+                f => f.Compare(c => c.Compare<Car>(car => car.Price).With(Operators.LT, CHEAPCAR_PRICE))
             );
         }
 
@@ -64,10 +64,10 @@ namespace SqlQueryBuilder.Test
         private IWhereBuilder SweetSpotLexusCondition(IWhereBuilderFactory factory)
         {
             return factory.And(
-                f => f.Compare<Car>(car => car.ModelYear, Compare.GT, LEXUS_YEAR),
-                f => f.Compare<Car>(car => car.Mileage, Compare.LT, LEXUS_MILEAGE),
-                f => f.Compare<Car>(car => car.Price, Compare.LTE, LEXUS_PRICE),
-                f => f.Compare<CarMaker>(maker => maker.Name, Compare.LIKE, LEXUS_BRAND)
+                f => f.Compare(c => c.Compare<Car>(car => car.ModelYear).With(Operators.GT, LEXUS_YEAR)),
+                f => f.Compare(c => c.Compare<Car>(car => car.Mileage).With(Operators.LT, LEXUS_MILEAGE)),
+                f => f.Compare(c => c.Compare<Car>(car => car.Price).With(Operators.LTE, LEXUS_PRICE)),
+                f => f.Compare(c => c.Compare<CarMaker>(maker => maker.Name).With(Operators.LIKE, LEXUS_BRAND))
             );
         }
 

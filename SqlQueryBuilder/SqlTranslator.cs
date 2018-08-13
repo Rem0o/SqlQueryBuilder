@@ -10,10 +10,6 @@ namespace SqlQueryBuilder
         public bool HasError { get; private set; } = false;
         private readonly Dictionary<string, Type> Tables = new Dictionary<string, Type>();
 
-        public SqlTranslator()
-        {
-        }
-
         public bool AddTable<T>(string tableAlias)
         {
             if (Tables.ContainsKey(tableAlias))
@@ -45,12 +41,12 @@ namespace SqlQueryBuilder
             }
         }
 
-        public IEnumerable<string> Translate<T>(Expression<Func<T, object>> lambda, string tableName)
+        public IEnumerable<string> Translate<T, U>(Expression<Func<T, U>> lambda, string tableName)
         {
             return NameOf(lambda).Select(x => Translate<T>(x, tableName));
         }
 
-        public string GetFirstTranslation<T>(Expression<Func<T, object>> lambda, string tableName)
+        public string GetFirstTranslation<T, U>(Expression<Func<T, U>> lambda, string tableName)
         {
             return NameOf(lambda).Select(x => Translate<T>(x, tableName)).FirstOrDefault();
         }

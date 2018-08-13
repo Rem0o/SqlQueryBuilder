@@ -1,6 +1,5 @@
 using SqlQueryBuilder.Test.POCO;
 using System;
-using System.Collections.Generic;
 using Xunit;
 
 namespace SqlQueryBuilder.Test
@@ -15,14 +14,14 @@ namespace SqlQueryBuilder.Test
             var isValid = GetBuilder().From<Car>()
                 .Join<Car, CarMaker>(car => car.CarMakerId, maker => maker.Id)
                 .SelectAll<Car>()
-                .Where<CarMaker>(maker => maker.Name, Compare.EQ, "@brand")
+                .Where(c => c.Compare<CarMaker>(maker => maker.Name).With(Operators.EQ, "@brand"))
                 .OrderBy<CarMaker>(maker => maker.FoundationDate, desc: true)
                 .TryBuild(out var query);
 
             Assert.True(isValid, "The query should be valid");
 
             var expectedQuery = $"SELECT [Car].* FROM [Car] JOIN [CarMaker] ON [Car].[CarMakerId] = [CarMaker].[Id] "
-                + "WHERE ([CarMaker].[Name] = @brand) ORDER BY [CarMaker].[FoundationDate] DESC";
+                + "WHERE (([CarMaker].[Name]) = (@brand)) ORDER BY [CarMaker].[FoundationDate] DESC";
             Assert.True(CompareQueries(expectedQuery, query));
         }
 
@@ -34,15 +33,15 @@ namespace SqlQueryBuilder.Test
             var isValid = GetBuilder().From<Car>(carTableAlias)
                 .Join<Car, CarMaker>(car => car.CarMakerId, maker => maker.Id, table1Alias: carTableAlias, table2Alias: makerTableAlias)
                 .SelectAll<Car>(carTableAlias)
-                .Where<CarMaker>(maker => maker.Name, Compare.EQ, "@brand", tableAlias: makerTableAlias)
-                .Where<Car>(car => car.ModelYear, Compare.GT, "@year", tableAlias: carTableAlias)
+                .Where(c => c.Compare<CarMaker>(maker => maker.Name, makerTableAlias).With(Operators.EQ, "@brand"))
+                .Where(c => c.Compare<Car>(car => car.ModelYear, carTableAlias).With(Operators.GT, "@year"))
                 .TryBuild(out var query);
 
             Assert.True(isValid, "The query should be valid");
 
             var expectedQuery = $"SELECT [{carTableAlias}].* FROM [Car] AS [{carTableAlias}] "
                 + $"JOIN [CarMaker] AS [{makerTableAlias}] ON [{carTableAlias}].[CarMakerId] = [{makerTableAlias}].[Id] "
-                + $"WHERE ([{makerTableAlias}].[Name] = @brand) AND ([{carTableAlias}].[ModelYear] > @year)";
+                + $"WHERE (([{makerTableAlias}].[Name]) = (@brand)) AND (([{carTableAlias}].[ModelYear]) > (@year))";
             Assert.True(CompareQueries(expectedQuery, query));
         }
 
@@ -57,14 +56,14 @@ namespace SqlQueryBuilder.Test
                     // inferred alias for "Car" because "Car" is only referred in a single FROM/JOIN
                     .SelectAll<Car>()
                     // inferred alias for "CarMaker" because "CarMaker" is only referred in a single FROM/JOIN
-                    .Where<CarMaker>(maker => maker.Name, Compare.LIKE, "@brand") 
+                    .Where(c => c.Compare<CarMaker>(maker => maker.Name).With(Operators.LIKE, "@brand"))
                     .TryBuild(out var query);
 
             Assert.True(isValid);
 
             var expectedQuery = $"SELECT [{CAR_ALIAS}].* FROM [Car] AS [{CAR_ALIAS}] "
                 + $"LEFT JOIN [CarMaker] AS [{MAKER_ALIAS}] ON [{CAR_ALIAS}].[CarMakerId] = [{MAKER_ALIAS}].[Id] "
-                + $"WHERE ([{MAKER_ALIAS}].[Name] LIKE @brand)";
+                + $"WHERE (([{MAKER_ALIAS}].[Name]) LIKE (@brand))";
 
             Assert.True(CompareQueries(expectedQuery, query));
         }
@@ -87,9 +86,9 @@ namespace SqlQueryBuilder.Test
         {
             var isValid = GetBuilder().From<Car>()
                 .Join<Car, CarMaker>(car => car.CarMakerId, maker => maker.Id)
+                .SelectAs(translator => new Aggregate(AggregateFunctions.AVG, translator).Select<Car>(car => car.Mileage), "AverageMileage")
                 .Select<Car>(car => car.ModelYear)
                 .Select<CarMaker>(maker => maker.Name)
-                .SelectAggregateAs<Car>(AggregateFunctions.AVG, car => car.Mileage, "AverageMileage")
                 .GroupBy<Car>(car => car.ModelYear)
                 .GroupBy<CarMaker>(maker => maker.Name)
                 .TryBuild(out var query);
@@ -100,22 +99,6 @@ namespace SqlQueryBuilder.Test
 
             Assert.True(isValid);
             Assert.True(CompareQueries(expectedQuery, query));
-        }
-
-        [Fact]
-        public void SelectAggregate_AverageWithFailCondition_InvalidQuery()
-        {
-            var isValid = GetBuilder().From<Car>()
-                .Join<Car, CarMaker>(car => car.CarMakerId, maker => maker.Id)
-                .SelectAggregateAs<Car>(AggregateFunctions.AVG, car => car.Mileage, "AverageMileage")
-                .Select<Car>(car => car.CarMakerId) // FAIL CONDITION: not in any group by clause
-                .Select<Car>(car => car.ModelYear)
-                .Select<CarMaker>(maker => maker.Name)
-                .GroupBy<Car>(car => car.ModelYear)
-                .GroupBy<CarMaker>(maker => maker.Name)
-                .TryBuild(out _);
-
-            Assert.False(isValid, "An aggregation query with a select item not in any group by clauses should not be valid");
         }
 
         [Theory]
@@ -169,7 +152,7 @@ namespace SqlQueryBuilder.Test
             var isValid = GetBuilder().From<Car>(CAR1)
                     .LeftJoin<Car, Car>(car1 => car1.ModelYear, car2 => car2.ModelYear, CAR1, CAR2)
                     .SelectAll<Car>(CAR1)
-                    .Where<Car, Car>(car1 => car1.Id, Compare.NEQ, car2 => car2.Id, CAR1, CAR2)
+                    .Where(c => c.Compare<Car>(car1 => car1.Id, CAR1).With<Car>(Operators.NEQ, car2 => car2.Id, CAR2))
                     .TryBuild(out _);
 
             Assert.True(isValid);
@@ -182,7 +165,7 @@ namespace SqlQueryBuilder.Test
             translator.AddTable<Car>("Car");
             translator.AddTable<CarMaker>("CarMaker");
 
-            var whereIsValid = CountryCondition(new WhereBuilderFactory(translator))
+            var whereIsValid = CountryCondition(translator)
                 .TryBuild(out _);
 
             Assert.False(whereIsValid, "The where clause needs to be invalid");
@@ -193,15 +176,16 @@ namespace SqlQueryBuilder.Test
             Assert.True(basicQuery.TryBuild(out _), "The basic query should be valid");
 
             var isValid = basicQuery
-                .Where(CountryCondition) // Fail condition
+                .WhereFactory(CountryCondition) // Fail condition
                 .TryBuild(out var query);
 
             Assert.False(isValid, "An invalid where should cause an otherwise valid query to be invalid");
         }
 
-        private IWhereBuilder CountryCondition(IWhereBuilderFactory factory)
+        private IWhereBuilder CountryCondition(ISqlTranslator translator)
         {
-            return factory.Compare<Country>(c => c.Name, Compare.LIKE, "Germany");
+            return new WhereBuilderFactory(translator)
+                .Compare(c => c.Compare<Country>(country => country.Name).With(Operators.LIKE, "Germany"));
         }
 
         private bool CompareQueries(string first, string second)
