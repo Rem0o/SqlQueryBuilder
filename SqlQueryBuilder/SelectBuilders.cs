@@ -4,6 +4,9 @@ namespace SqlQueryBuilder
 {
     public enum DateDiffType
     {
+        SECOND,
+        MINUTE,
+        HOUR,
         DAY,
         MONTH,
         YEAR
@@ -12,9 +15,9 @@ namespace SqlQueryBuilder
     public class DateDiff : SelectBuilder<DateTime>
     {
         private readonly DateDiffType type;
-        private readonly DateTime compareTo;
+        private readonly string compareTo;
 
-        public DateDiff(DateDiffType type, DateTime compareTo, ISqlTranslator translator) : base(translator)
+        public DateDiff(DateDiffType type, string compareTo)
         {
             this.type = type;
             this.compareTo = compareTo;
@@ -22,7 +25,7 @@ namespace SqlQueryBuilder
 
         protected override string CreateClause(string column)
         {
-            return $"datediff({type.ToString()}, {column}, '{compareTo.ToString("yyyy-MM-dd")}')";
+            return $"datediff({type.ToString()}, {column}, '{compareTo}')";
         }
     }
 
@@ -30,7 +33,7 @@ namespace SqlQueryBuilder
     {
         private readonly DateDiffType type;
 
-        public DateDiff2(DateDiffType type, ISqlTranslator translator) : base(translator)
+        public DateDiff2(DateDiffType type)
         {
             this.type = type;
         }
@@ -45,7 +48,7 @@ namespace SqlQueryBuilder
     {
         private readonly string aggregateFunction;
 
-        public Aggregate(string aggregateFunction, ISqlTranslator translator) : base(translator)
+        public Aggregate(string aggregateFunction)
         {
             this.aggregateFunction = aggregateFunction;
         }

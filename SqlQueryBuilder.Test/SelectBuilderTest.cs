@@ -14,11 +14,11 @@ namespace SqlQueryBuilder.Test
             DateTime compareTo = DateTime.Now;
             var translator = GetTranslator();
 
-            var mydatediff = new DateDiff(DateDiffType.YEAR, DateTime.Now, translator);
+            var mydatediff = new DateDiff(DateDiffType.YEAR, DateTime.Now.ToString("yyyy-MM-dd"));
 
             Assert.True(mydatediff
                 .Select<CarMaker>(maker => maker.FoundationDate)
-                .TryBuild(out string clause));
+                .TryBuild(translator, out string clause));
 
             Assert.True($"datediff(YEAR, [CarMaker].[FoundationDate], '{compareTo.ToString("yyyy-MM-dd")}')" == clause);
         }
@@ -26,7 +26,7 @@ namespace SqlQueryBuilder.Test
         private static SqlTranslator GetTranslator()
         {
             var translator = new SqlTranslator();
-            translator.AddTable<CarMaker>("CarMaker");
+            translator.AddTable(typeof(CarMaker));
             return translator;
         }
     }

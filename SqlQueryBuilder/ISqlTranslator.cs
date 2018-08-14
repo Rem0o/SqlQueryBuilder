@@ -7,9 +7,9 @@ namespace SqlQueryBuilder
     public interface ISqlTranslator
     {
         bool HasError { get; }
-        bool AddTable<T>(string tableAlias);
-        string GetFirstTranslation<T, U>(Expression<Func<T, U>> lambda, string tableName);
-        IEnumerable<string> Translate<T, U>(Expression<Func<T, U>> lambda, string tableName);
-        string Translate<T>(string col, string tableAlias);
+        bool AddTable(Type type, string tableAlias);
+        string GetFirstTranslation(Type type, Expression lambda, string tableName);
+        IEnumerable<string> Translate(Type type, Expression lambda, string tableName);
+        string Translate(Type type, string col, string tableAlias);
     }
 }

@@ -5,15 +5,15 @@ namespace SqlQueryBuilder
 {
     public interface ICompare
     {
-        ICompareWith Compare(Func<ISqlTranslator, ISelectBuilder> selectBuilderFactory);
+        ICompareWith Compare(ISelectBuilder selectBuilder);
         ICompareWith Compare(string val);
         ICompareWith Compare<U>(Expression<Func<U, object>> lambda, string tableAlias = null);
     }
 
     public interface ICompareWith
     {
-        string With(string op, Func<ISqlTranslator, ISelectBuilder> selectBuilderFactory);
-        string With(string op, string val);
-        string With<U>(string op, Expression<Func<U, object>> lambda, string tableAlias = null);
+        ICompareBuilder With(string op, ISelectBuilder selectBuilder);
+        ICompareBuilder With(string op, string val);
+        ICompareBuilder With<U>(string op, Expression<Func<U, object>> lambda, string tableAlias = null);
     }
 }

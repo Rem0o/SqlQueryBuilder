@@ -10,6 +10,7 @@
   - Build your complex "WHERE" clauses as sub-blocks you can assemble
   - Use complex selectors like aggregates and SQL functions by inheriting the SelectBuilder class.
   - Supports table name alias (when you join the same table multiple times)
+  - All depedencies are abstracted and injected, can easily be integrated with any IoC library.
 
 ## Code exemples
 
@@ -62,7 +63,7 @@ var isValid = new SqlQueryBuilder().From<Car>()
     .Join<Car, CarMaker>(car => car.CarMakerId, maker => maker.Id)
     .Select<CarMaker>(maker => maker.Name)
     .Select<Car>(car => car.ModelYear)
-    .SelectAs(t => new Aggregate(AggregateFunctions.AVG, t).Select<Car>(car => car.Price), "AveragePrice")
+    .SelectAs(new Aggregate(AggregateFunctions.AVG).Select<Car>(car => car.Price), "AveragePrice")
     .GroupBy<Car>(car => car.ModelYear)
     .GroupBy<CarMaker>(maker => maker.Name)
     .TryBuild(out string query);
@@ -77,13 +78,13 @@ GROUP BY [Car].[ModelYear], [CarMaker].[Name]
 
 A complex selector is described as a class. Simply inherit SelectBuilder<T> to create your own easily. The generic <T> will enforce (or not using object) a specific type on your special selector. For example, here is a DATEDIFF implementation that requires the selector to be of a DateTime type.
 ```c#
-//definition
+// definition
 public class DateDiff : SelectBuilder<DateTime>
 {
     private readonly DateDiffType type;
     private readonly DateTime compareTo;
 
-    public DateDiff(DateDiffType type, DateTime compareTo, ISqlTranslator translator) : base(translator)
+    public DateDiff(DateDiffType type, DateTime compareTo)
     {
         this.type = type;
         this.compareTo = compareTo;
@@ -98,7 +99,7 @@ public class DateDiff : SelectBuilder<DateTime>
 // (...)
 
 // usage
-new DateDiff(DateDiffType.YEAR, new DateTime(2018,1,1), translator)
+new DateDiff(DateDiffType.YEAR, new DateTime(2018,1,1))
     .Select<CarMaker>(maker => maker.FoundationDate);
 ```
 
@@ -114,19 +115,19 @@ People's car tastes can be all over the place, and so can be your "WHERE" clause
 private IWhereBuilder CheapCarCondition(IWhereBuilderFactory factory)
 {
     return factory.And(
-        f => f.Compare<Car>(car => car.Mileage, Compare.LT, "@cheap_mileage"),
-        f => f.Compare<Car>(car => car.Price, Compare.LT, "@cheap_price"),
-        f => f.Compare<CarMaker>(maker => maker.Name, Compare.NEQ, "@cheap_name"),
-        f => f.Compare<Country>(country => country.Name, Compare.NEQ, "@cheap_country")
+        f => f.Compare(c => c.Compare<Car>(car => car.Mileage, Compare.LT, "@cheap_mileage"),
+        f => f.Compare(c => c.Compare<Car>(car => car.Price, Compare.LT, "@cheap_price"),
+        f => f.Compare(c => c.Compare<CarMaker>(maker => => maker.Name, Compare.NEQ, "@cheap_name"),
+        f => f.Compare(c => c.Compare<Country>(country => country.Name, Compare.NEQ, "@cheap_country")
     );
 }
 
 private IWhereBuilder DreamCarExceptionCondition(IWhereBuilderFactory factory)
 {
     return new WhereBuilderFactory(.And(
-        f => f.Compare<Car>(car => car.Mileage, Compare.LT, "@dream_mileage"),
-        f => f.Compare<Car>(car => car.Price, Compare.LT, "@dream_price"),
-        f => f.Compare<CarMaker>(maker => maker.Name, Compare.EQ, "@dream_maker"),
+        f => f.Compare(c => c.Compare<Car>(car => car.Mileage, Compare.LT, "@dream_mileage"),
+        f => f.Compare(c => c.Compare<Car>(car => car.Price, Compare.LT, "@dream_price"),
+        f => f.Compare(c => c.Compare<CarMaker>(maker => maker.Name, Compare.EQ, "@dream_maker"),
     );
 }
 ```
@@ -137,7 +138,7 @@ var isValid = new SqlQueryBuilder().From<Car>()
     .Join<Car, CarMaker>(car => car.CarMakerId, maker => maker.Id)
     .Join<CarMaker, Country>(maker => maker.CountryOfOriginId, country => country.Id)
     .Select<Car>(car => new { car.Id, car.Price })
-    .WhereFactory(t => new WhereBuilderFactory(t).Or(
+    .WhereFactory(factory => factory.Or(
         CheapCarCondition,
         DreamCarExceptionCondition
     ))

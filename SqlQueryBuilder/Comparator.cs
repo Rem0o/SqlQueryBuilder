@@ -1,60 +1,75 @@
 ﻿using System;
-using System.Collections.Generic;
+using System.Linq;
 using System.Linq.Expressions;
 
 namespace SqlQueryBuilder
 {
-    public class Comparator : ICompare, ICompareWith
+    public class Comparator : ICompare, ICompareWith, ICompareBuilder
     {
-        private readonly List<string> _list = new List<string>();
-        private readonly ISqlTranslator translator;
-
-        public Comparator (ISqlTranslator translator)
-        {
-            this.translator = translator;
-        }
+        private Func<ISqlTranslator, string> _first;
+        private Func<ISqlTranslator, string> _second;
+        private string _operator;
 
         public ICompareWith Compare(string val)
         {
-            _list.Add(WrapWithParentheses(val));
+            _first = _ => val;
             return this;
         }
 
         public ICompareWith Compare<U>(Expression<Func<U, object>> lambda, string tableAlias = null)
         {
-            _list.Add(WrapWithParentheses(this.translator.GetFirstTranslation(lambda, null)));
+            _first = t => t.GetFirstTranslation(typeof(U), lambda, tableAlias);
             return this;
         }
 
-        public ICompareWith Compare(Func<ISqlTranslator, ISelectBuilder> selectBuilderFactory)
+        public ICompareWith Compare(ISelectBuilder selectBuilder)
         {
-            selectBuilderFactory(this.translator).TryBuild(out string str);
-            _list.Add(WrapWithParentheses(str));
+            _first = t => {
+                selectBuilder.TryBuild(t, out string str);
+                return str;
+            };
+
             return this;
         }
 
-        public string With(string op, string val)
+        public ICompareBuilder With(string op, string val)
         {
-            _list.Add(op);
-            Compare(val);
-            return JoinList();
+            _operator = op;
+            _second = _ => val;
+            return this;
         }
 
-        public string With<U>(string op, Expression<Func<U, object>> lambda, string tableAlias = null)
+        public ICompareBuilder With<U>(string op, Expression<Func<U, object>> lambda, string tableAlias = null)
         {
-            _list.Add(op);
-            Compare(lambda, tableAlias);
-            return JoinList();
+            _operator = op;
+            _second = t => t.GetFirstTranslation(typeof(U), lambda, tableAlias);
+            return this;
         }
 
-        public string With(string op, Func<ISqlTranslator, ISelectBuilder> selectBuilderFactory)
+        public ICompareBuilder With(string op, ISelectBuilder selectBuilder)
         {
-            _list.Add(op);
-            Compare(selectBuilderFactory);
-            return JoinList();
+            _operator = op;
+            _second = t => {
+                selectBuilder.TryBuild(t, out string str);
+                return str;
+            };
+
+            return this;
         }
 
         private string WrapWithParentheses(string str) => $"({str})";
-        private string JoinList() => WrapWithParentheses(string.Join(" ", _list));
+
+        public bool TryBuild(ISqlTranslator translator, out string comparison)
+        {
+            comparison = "";
+            string val1 = _first(translator);
+            string val2 = _second(translator);
+
+            if (new[] { val1, val2, _operator }.Any(string.IsNullOrEmpty))
+                return false;
+
+            comparison = WrapWithParentheses($"{WrapWithParentheses(val1)} {_operator} {WrapWithParentheses(val2)}");
+            return true;
+        }
     }
 }

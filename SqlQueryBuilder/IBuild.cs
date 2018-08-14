@@ -7,11 +7,16 @@
 
     public interface ISelectBuilder
     {
-        bool TryBuild(out string select);
+        bool TryBuild(ISqlTranslator translator, out string select);
     }
 
     public interface IWhereBuilder
     {
-        bool TryBuild(out string where);
+        bool TryBuild(ISqlTranslator translator, out string where);
+    }
+
+    public interface ICompareBuilder
+    {
+        bool TryBuild(ISqlTranslator translator, out string comparison);
     }
 }

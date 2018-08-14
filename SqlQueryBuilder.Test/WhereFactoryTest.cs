@@ -8,12 +8,14 @@ namespace SqlQueryBuilder.Test
 {
     public class WhereFactoryTest
     {
+        private IWhereBuilderFactory GetFactory() => new WhereBuilderFactory(() => new Comparator());
+
         [Fact]
         public void Or_WithinMapper_Valid()
         {
             var translator = GetTranslator();
 
-            var builder = new WhereBuilderFactory(translator).Or(
+            var builder = GetFactory().Or(
                 CheapCarCondition,
                 SweetSpotLexusCondition
             );
@@ -22,7 +24,7 @@ namespace SqlQueryBuilder.Test
                 + $" OR ((([Car].[ModelYear]) > ({LEXUS_YEAR})) AND (([Car].[Mileage]) < ({LEXUS_MILEAGE})) AND"
                 + $" (([Car].[Price]) <= ({LEXUS_PRICE})) AND (([CarMaker].[Name]) LIKE ({LEXUS_BRAND}))))";
 
-            Assert.True(builder.TryBuild(out var whereClause));
+            Assert.True(builder.TryBuild(translator, out var whereClause));
             Assert.True(whereClause == expectedWhereClause);
         }
 
@@ -37,12 +39,12 @@ namespace SqlQueryBuilder.Test
                 f => f.Compare(c => c.Compare<Country>(country => country.Name).With(Operators.NEQ, "USA"))
              );
 
-            var builder = new WhereBuilderFactory(translator).Or(
+            var builder = GetFactory().Or(
                 CheapNonAmericanCondition,
                 SweetSpotLexusCondition
             );
 
-            Assert.False(builder.TryBuild(out _));
+            Assert.False(builder.TryBuild(translator, out _));
         }
 
         private const string CHEAPCAR_MILEAGE = "100000";
@@ -74,8 +76,8 @@ namespace SqlQueryBuilder.Test
         private static SqlTranslator GetTranslator()
         {
             var translator = new SqlTranslator();
-            translator.AddTable<Car>("Car");
-            translator.AddTable<CarMaker>("CarMaker");
+            translator.AddTable(typeof(Car));
+            translator.AddTable(typeof(CarMaker));
             return translator;
         }
     }

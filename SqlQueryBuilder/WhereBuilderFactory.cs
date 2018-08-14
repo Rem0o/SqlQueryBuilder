@@ -6,18 +6,24 @@ namespace SqlQueryBuilder
 {
     public class WhereBuilderFactory: IWhereBuilderFactory, IWhereBuilder
     {
-        private readonly ISqlTranslator translator;
+        private readonly Func<ICompare> _compareFactory;
 
-        private string _whereClause { get; set; }
+        private Func<ISqlTranslator, string> _whereExpression { get; set; }
 
-        public WhereBuilderFactory(ISqlTranslator translator)
+        public WhereBuilderFactory(Func<ICompare> compareFactory)
         {
-            this.translator = translator;
+            this._compareFactory = compareFactory;
         }
 
-        public IWhereBuilder Compare(Func<ICompare, string> compareFactory)
+        public IWhereBuilder Compare(Func<ICompare, ICompareBuilder> compareBuilderFactory)
         {
-            _whereClause = compareFactory(new Comparator(translator));
+            _whereExpression = t =>
+            {
+                if (compareBuilderFactory(_compareFactory()).TryBuild(t, out string comparison))
+                    return comparison;
+                return string.Empty;
+            };
+
             return this;
         }
 
@@ -27,28 +33,33 @@ namespace SqlQueryBuilder
 
         private IWhereBuilder JoinConditions(string compare, params Func<IWhereBuilderFactory, IWhereBuilder>[] clauses)
         {
-            var clauseResults = clauses.Select(condition => {
-                var success = condition(new WhereBuilderFactory(translator)).TryBuild(out string whereClause);
-                return new { success, whereClause };
-            });
-
-            if (clauseResults.Any(x => x.success == false))
+            _whereExpression = t =>
             {
-                _whereClause = "";
-                return this;
-            }
+                var res = clauses.Select(condition =>
+                {
+                    var success = condition(new WhereBuilderFactory(_compareFactory)).TryBuild(t, out string whereClause);
+                    return new { success, whereClause };
+                });
 
-            _whereClause = $"({string.Join($" {compare} ", clauseResults.Select(x => x.whereClause))})";
+                if (res.Any(r => !r.success))
+                    return "";
+                else
+                    return $"({string.Join($" {compare} ", res.Select(x => x.whereClause))})";
+            };
+            
             return this;
         }         
 
-        public bool TryBuild(out string whereClause)
+        public bool TryBuild(ISqlTranslator translator, out string whereClause)
         {
-            whereClause = "";
+            whereClause = string.Empty;
             if (translator.HasError)
                 return false;
 
-            whereClause = _whereClause;
+            whereClause = _whereExpression(translator);
+            if (string.IsNullOrEmpty(whereClause))
+                return false;
+
             return true;
         }
     }

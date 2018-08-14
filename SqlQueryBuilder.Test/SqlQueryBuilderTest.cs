@@ -6,7 +6,13 @@ namespace SqlQueryBuilder.Test
 {
     public class SqlQueryBuilderTest
     {
-        private IQueryBuilderFrom GetBuilder() => new SqlQueryBuilder();
+        private IQueryBuilderFrom GetBuilder()
+        {
+            var t = new SqlTranslator();
+            Func<ICompare> compareFactory = () => new Comparator();
+            Func<IWhereBuilderFactory> wbf = () => new WhereBuilderFactory(compareFactory);
+            return new Builder(t, wbf, compareFactory);
+        }
 
         [Fact]
         public void SelectFrom_POCO_ValidQuery()
@@ -86,7 +92,7 @@ namespace SqlQueryBuilder.Test
         {
             var isValid = GetBuilder().From<Car>()
                 .Join<Car, CarMaker>(car => car.CarMakerId, maker => maker.Id)
-                .SelectAs(translator => new Aggregate(AggregateFunctions.AVG, translator).Select<Car>(car => car.Mileage), "AverageMileage")
+                .SelectAs(new Aggregate(AggregateFunctions.AVG).Select<Car>(car => car.Mileage), "AverageMileage")
                 .Select<Car>(car => car.ModelYear)
                 .Select<CarMaker>(maker => maker.Name)
                 .GroupBy<Car>(car => car.ModelYear)
@@ -162,11 +168,13 @@ namespace SqlQueryBuilder.Test
         public void WhereBuilderValidity_Affect_QueryValidity()
         { 
             var translator = new SqlTranslator();
-            translator.AddTable<Car>("Car");
-            translator.AddTable<CarMaker>("CarMaker");
+            translator.AddTable(typeof(Car));
+            translator.AddTable(typeof(CarMaker));
 
-            var whereIsValid = CountryCondition(translator)
-                .TryBuild(out _);
+            var whereBuilderFactory = new WhereBuilderFactory(() => new Comparator());
+
+            var whereIsValid = CountryCondition(whereBuilderFactory)
+                .TryBuild(translator, out _);
 
             Assert.False(whereIsValid, "The where clause needs to be invalid");
 
@@ -182,10 +190,9 @@ namespace SqlQueryBuilder.Test
             Assert.False(isValid, "An invalid where should cause an otherwise valid query to be invalid");
         }
 
-        private IWhereBuilder CountryCondition(ISqlTranslator translator)
+        private IWhereBuilder CountryCondition(IWhereBuilderFactory factory)
         {
-            return new WhereBuilderFactory(translator)
-                .Compare(c => c.Compare<Country>(country => country.Name).With(Operators.LIKE, "Germany"));
+            return factory.Compare(c => c.Compare<Country>(country => country.Name).With(Operators.LIKE, "Germany"));
         }
 
         private bool CompareQueries(string first, string second)

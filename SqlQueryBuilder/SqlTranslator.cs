@@ -10,24 +10,25 @@ namespace SqlQueryBuilder
         public bool HasError { get; private set; } = false;
         private readonly Dictionary<string, Type> Tables = new Dictionary<string, Type>();
 
-        public bool AddTable<T>(string tableAlias)
+        public bool AddTable(Type type, string tableAlias = null)
         {
-            if (Tables.ContainsKey(tableAlias))
+            var alias = tableAlias ?? type.Name;
+            if (Tables.ContainsKey(alias))
             {
                 HasError = true;
                 return false;
             }
                 
-            Tables.Add(tableAlias, typeof(T));
+            Tables.Add(alias, type);
             return true;
         }
 
-        public string Translate<T>(string col, string tableAlias)
+        public string Translate(Type type, string col, string tableAlias)
         {
             KeyValuePair<string, Type> kv = Tables.FirstOrDefault(x =>
             {
                 if (string.IsNullOrEmpty(tableAlias))
-                    return x.Value.Name == typeof(T).Name;
+                    return x.Value.Name == type.Name;
                 else
                     return x.Key == tableAlias;
             });
@@ -41,14 +42,14 @@ namespace SqlQueryBuilder
             }
         }
 
-        public IEnumerable<string> Translate<T, U>(Expression<Func<T, U>> lambda, string tableName)
+        public IEnumerable<string> Translate(Type type, Expression expression, string tableName)
         {
-            return NameOf(lambda).Select(x => Translate<T>(x, tableName));
+            return NameOf(expression).Select(x => Translate(type, x, tableName));
         }
 
-        public string GetFirstTranslation<T, U>(Expression<Func<T, U>> lambda, string tableName)
+        public string GetFirstTranslation(Type type, Expression expression, string tableName)
         {
-            return NameOf(lambda).Select(x => Translate<T>(x, tableName)).FirstOrDefault();
+            return NameOf(expression).Select(x => Translate(type, x, tableName)).FirstOrDefault();
         }
 
         private IEnumerable<string> NameOf(Expression expression)

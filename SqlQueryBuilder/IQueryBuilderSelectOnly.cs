@@ -5,9 +5,9 @@ namespace SqlQueryBuilder
 {
     public interface IQueryBuilderSelectOnly
     {
-        IQueryBuilderSelect Top(int i);
-        IQueryBuilderSelect Select<T>(Expression<Func<T, object>> lambda, string tableAlias = null);
-        IQueryBuilderSelect SelectAll<T>(string tableAlias = null);
-        IQueryBuilderSelect SelectAs(Func<ISqlTranslator, ISelectBuilder> selectBuilderFactory, string alias);
+        IQueryBuilderSelectOrWhere Top(int i);
+        IQueryBuilderSelectOrWhere Select<T>(Expression<Func<T, object>> lambda, string tableAlias = null);
+        IQueryBuilderSelectOrWhere SelectAll<T>(string tableAlias = null);
+        IQueryBuilderSelectOrWhere SelectAs(ISelectBuilder selectBuilder, string alias);
     }
 }

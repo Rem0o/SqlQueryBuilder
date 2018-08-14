@@ -1,14 +1,17 @@
 ﻿using System;
 using System.Collections.Generic;
-using System.Linq;
+using System.ComponentModel;
 using System.Linq.Expressions;
 
 namespace SqlQueryBuilder
 {
-    public class SqlQueryBuilder : IQueryBuilderFrom, IQueryBuilderJoinOrSelect, IQueryBuilderSelect
+    public class Builder : IQueryBuilderFrom, IQueryBuilderJoinOrSelect, IQueryBuilderSelectOrWhere
     {
+        private readonly Func<IWhereBuilderFactory> _createWhereBuilderFactory;
+        private readonly Func<ICompare> _compareFactory;
+        private ISqlTranslator _translator = new SqlTranslator();
+
         private KeyValuePair<string, Type> TableFrom { get; set; }
-        private ISqlTranslator Translator = new SqlTranslator();
         private int TopClause = 0;
         private List<string> SelectClauses = new List<string>();
         private List<string> WhereClauses = new List<string>();
@@ -16,12 +19,19 @@ namespace SqlQueryBuilder
         private List<string> OrderByClauses = new List<string>();
         private List<string> GroupByClauses = new List<string>();
 
-        private SqlQueryBuilder SkipIfError(Action action)
+        private Builder SkipIfError(Action action)
         {
-            if (!Translator.HasError)
+            if (!_translator.HasError)
                 action();
 
             return this;
+        }
+
+        public Builder(ISqlTranslator translator, Func<IWhereBuilderFactory> createWhereBuilderFactory, Func<ICompare> compareFactory)
+        {
+            this._translator = translator;
+            this._createWhereBuilderFactory = createWhereBuilderFactory;
+            this._compareFactory = compareFactory;
         }
 
         public IQueryBuilderJoinOrSelect From<T>(string tableAlias = null)
@@ -29,23 +39,23 @@ namespace SqlQueryBuilder
             var type = typeof(T);
             var tableAliasKey = tableAlias ?? type.Name;
             TableFrom = new KeyValuePair<string, Type>(tableAliasKey, type);
-
-            Translator.AddTable<T>(TableFrom.Key);
+            _translator.AddTable(type, TableFrom.Key);
             return this;
         }
 
         public IQueryBuilderJoinOrSelect Join<T, U>(Expression<Func<T, object>> key1, Expression<Func<U, object>> key2, string table1Alias = null,
             string table2Alias = null, string joinType = null) => SkipIfError(() =>
         {
+            var table1Type = typeof(T);
             var joinTable2Type = typeof(U);
             var joinTable2Name = string.IsNullOrEmpty(table2Alias) ? joinTable2Type.Name : table2Alias;
 
-            if (Translator.AddTable<U>(joinTable2Name) == false)
+            if (_translator.AddTable(joinTable2Type, joinTable2Name) == false)
                 return;
 
             var joinTypeStr = (string.IsNullOrEmpty(joinType) ? string.Empty : $"{joinType} ") + "JOIN";
             var joinTableStr = $"[{joinTable2Type.Name}]" + (!string.IsNullOrEmpty(table2Alias) ? $" AS [{table2Alias}]" : string.Empty);
-            var joinOnStr = $"{Translator.GetFirstTranslation(key1, table1Alias)} = {Translator.GetFirstTranslation(key2, joinTable2Name)}";
+            var joinOnStr = $"{_translator.GetFirstTranslation(table1Type, key1, table1Alias)} = {_translator.GetFirstTranslation(joinTable2Type, key2, joinTable2Name)}";
             var joinClause = $"{joinTypeStr} {joinTableStr} ON {joinOnStr}";
 
             JoinClauses.Add(joinClause);
@@ -69,51 +79,58 @@ namespace SqlQueryBuilder
             return Join(key1, key2, table1Alias, table2Alias, "FULL OUTER");
         }
 
-        public IQueryBuilderSelect Top(int i) => SkipIfError(() =>
+        public IQueryBuilderSelectOrWhere Top(int i) => SkipIfError(() =>
         {
             TopClause = i;
         });
         
-        public IQueryBuilderSelect SelectAll<T>(string tableAlias = null) =>
+        public IQueryBuilderSelectOrWhere SelectAll<T>(string tableAlias = null) =>
             SkipIfError(() =>
-                SelectClauses.Add(Translator.Translate<T>("*", tableAlias))
+                SelectClauses.Add(_translator.Translate(typeof(T), "*", tableAlias))
             );
 
-        public IQueryBuilderSelect Select<T>(Expression<Func<T, object>> lambda, string tableAlias = null) =>
+        public IQueryBuilderSelectOrWhere Select<T>(Expression<Func<T, object>> lambda, string tableAlias = null) =>
             SkipIfError(() =>
-                SelectClauses.AddRange(Translator.Translate(lambda, tableAlias))
+                SelectClauses.AddRange(_translator.Translate(typeof(T), lambda, tableAlias))
             );
 
-        public IQueryBuilderSelect SelectAs(Func<ISqlTranslator, ISelectBuilder> selectBuilderFactory, string alias) =>
+        public IQueryBuilderSelectOrWhere SelectAs(ISelectBuilder selectBuilder, string alias) =>
             SkipIfError(() =>
             {
-                var success = selectBuilderFactory(Translator)
-                    .TryBuild(out string selectClause);
+                var success = selectBuilder
+                    .TryBuild(_translator, out string selectClause);
+
                 if (success)
                     SelectClauses.Add($"{selectClause} AS [{alias}]");
             });
 
-        public IQueryBuilderWhere Where(Func<ICompare, string> compareFactory) =>
-            SkipIfError(() =>
-                WhereClauses.Add(compareFactory(new Comparator(Translator)))
-            );
-            
-        public IQueryBuilderWhere WhereFactory(Func<ISqlTranslator, IWhereBuilder> createBuilder) =>
+        public IQueryBuilderWhere Where(Func<ICompare, ICompareBuilder> compareBuilderFactory) =>
             SkipIfError(() =>
             {
-                var success = createBuilder(Translator).TryBuild(out var whereClause);
+                var success = compareBuilderFactory(_compareFactory())
+                    .TryBuild(_translator, out string comparison);
+
+                if (success)
+                    WhereClauses.Add(comparison);   
+            });
+            
+        public IQueryBuilderWhere WhereFactory(Func<IWhereBuilderFactory, IWhereBuilder> whereBuilder) =>
+            SkipIfError(() =>
+            {
+                var success = whereBuilder(_createWhereBuilderFactory()).TryBuild(_translator, out var whereClause);
+
                 if (success)
                     WhereClauses.Add(whereClause); 
             });
 
         public IQueryBuilderGroupBy GroupBy<T>(Expression<Func<T, object>> lambda, string tableAlias = null) =>
             SkipIfError(() =>
-                GroupByClauses.Add(Translator.GetFirstTranslation(lambda, tableAlias))
+                GroupByClauses.Add(_translator.GetFirstTranslation(typeof(T), lambda, tableAlias))
             );
 
         public IQueryBuilderOrderBy OrderBy<T>(Expression<Func<T, object>> lambda, bool desc = false, string tableAlias = null) =>
             SkipIfError(() =>
-                OrderByClauses.Add($"{Translator.GetFirstTranslation(lambda, tableAlias)}{(desc ? " DESC" : string.Empty)}")
+                OrderByClauses.Add($"{_translator.GetFirstTranslation(typeof(T), lambda, tableAlias)}{(desc ? " DESC" : string.Empty)}")
             );
 
         public bool TryBuild(out string query)
@@ -142,7 +159,7 @@ namespace SqlQueryBuilder
 
         private bool Validate()
         {
-            if (Translator.HasError)
+            if (_translator.HasError)
                 return false;
 
             if (SelectClauses.Count == 0)

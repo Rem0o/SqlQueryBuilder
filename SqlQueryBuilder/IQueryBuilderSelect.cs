@@ -1,4 +1,4 @@
 namespace SqlQueryBuilder
 {
-    public interface IQueryBuilderSelect: IQueryBuilderSelectOnly, IQueryBuilderWhere {}
+    public interface IQueryBuilderSelectOrWhere: IQueryBuilderSelectOnly, IQueryBuilderWhere {}
 }
