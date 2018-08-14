@@ -8,10 +8,10 @@ namespace SqlQueryBuilder.Test
     {
         private IQueryBuilderFrom GetBuilder()
         {
-            var t = new SqlTranslator();
-            Func<ICompare> compareFactory = () => new Comparator();
-            Func<IWhereBuilderFactory> wbf = () => new WhereBuilderFactory(compareFactory);
-            return new Builder(t, wbf, compareFactory);
+            ISqlTranslator translator = new SqlTranslator();
+            ICompare compareFactory() => new Comparator();
+            IWhereBuilderFactory whereBuilderFactory() => new WhereBuilderFactory(compareFactory);
+            return new Builder(translator, whereBuilderFactory, compareFactory);
         }
 
         [Fact]

@@ -14,11 +14,22 @@
 
 ## Code exemples
 
+Here is a basic factory method to get a builder. This factory method can be registered into any container library. 
+```c#
+private IQueryBuilderFrom GetBuilder()
+{
+    ISqlTranslator translator = new SqlTranslator();
+    ICompare compareFactory() => new Comparator();
+    IWhereBuilderFactory whereBuilderFactory() => new WhereBuilderFactory(compareFactory);
+    return new Builder(translator, whereBuilderFactory, compareFactory);
+}
+```
+
 ### A basic query
 
 Simply write your query with terms you are familiar with.
 ```c#
-bool isValid = new SqlQueryBuilder().From<Car>()
+bool isValid = GetBuilder.From<Car>()
     .SelectAll<Car>()
     .Where(comparator => comparator.Compare<Car>(car => car.ModelYear).With(Operators.GT, "@year"))
     .TryBuild(out string query);
@@ -40,7 +51,7 @@ You can use table aliases if you want to join the same table multiple times.
 const string TABLE1 = "MAKER1";
 const string TABLE2 = "MAKER2";
 
-var isValid = new SqlQueryBuilder().From<CarMaker>(TABLE1)
+var isValid = GetBuilder().From<CarMaker>(TABLE1)
     .Join<CarMaker, CarMaker>(maker1 => maker1.CountryOfOriginId, maker2 => maker2.CountryOfOriginId, TABLE1, TABLE2)
     .SelectAll<CarMaker>(TABLE1)
     .Where(comparator => comparator.Compare<CarMaker>(maker1 => maker1.Id, TABLE1).With<CarMaker>(Operators.NEQ, maker2 => maker2.Id, TABLE2))
@@ -59,7 +70,7 @@ WHERE [Maker1].[Id] <> [Maker2].Id
 
 Here is a more complex query. Note the use of a complex selector (average aggregate).
 ```c#
-var isValid = new SqlQueryBuilder().From<Car>()
+var isValid = GetBuilder().From<Car>()
     .Join<Car, CarMaker>(car => car.CarMakerId, maker => maker.Id)
     .Select<CarMaker>(maker => maker.Name)
     .Select<Car>(car => car.ModelYear)
@@ -134,7 +145,7 @@ private IWhereBuilder DreamCarExceptionCondition(IWhereBuilderFactory factory)
 The conditions above are assembled with a "OR" to create our very specific query! Also, notice the anonymous object used inside the select function.
 ```c#
 
-var isValid = new SqlQueryBuilder().From<Car>()
+var isValid = GetBuilder().From<Car>()
     .Join<Car, CarMaker>(car => car.CarMakerId, maker => maker.Id)
     .Join<CarMaker, Country>(maker => maker.CountryOfOriginId, country => country.Id)
     .Select<Car>(car => new { car.Id, car.Price })
