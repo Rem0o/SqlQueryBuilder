@@ -87,7 +87,7 @@ JOIN [CarMaker] ON [Car].[CarMakerId] = [CarMaker].[Id]
 GROUP BY [Car].[ModelYear], [CarMaker].[Name]
 ```
 
-A complex selector is described as a class. Simply inherit SelectBuilder<T> to create your own easily. The generic <T> will enforce (or not using object) a specific type on your special selector. For example, here is a DATEDIFF implementation that requires the selector to be of a DateTime type.
+A complex selector is described as a class. Simply inherit SelectBuilder<T> to create your own easily. The generic type \<T\> will enforce (or not using object) a specific type on your special selector. For example, here is a DATEDIFF implementation that requires the selector to be of a DateTime type.
 ```c#
 // definition
 public class DateDiff : SelectBuilder<DateTime>
@@ -126,19 +126,19 @@ People's car tastes can be all over the place, and so can be your "WHERE" clause
 private IWhereBuilder CheapCarCondition(IWhereBuilderFactory factory)
 {
     return factory.And(
-        f => f.Compare(c => c.Compare<Car>(car => car.Mileage, Compare.LT, "@cheap_mileage"),
-        f => f.Compare(c => c.Compare<Car>(car => car.Price, Compare.LT, "@cheap_price"),
-        f => f.Compare(c => c.Compare<CarMaker>(maker => => maker.Name, Compare.NEQ, "@cheap_name"),
-        f => f.Compare(c => c.Compare<Country>(country => country.Name, Compare.NEQ, "@cheap_country")
+        f => f.Compare(c => c.Compare<Car>(car => car.Mileage, Compare.LT, "@cheap_mileage")),
+        f => f.Compare(c => c.Compare<Car>(car => car.Price, Compare.LT, "@cheap_price")),
+        f => f.Compare(c => c.Compare<CarMaker>(maker => => maker.Name, Compare.NEQ, "@cheap_name")),
+        f => f.Compare(c => c.Compare<Country>(country => country.Name, Compare.NEQ, "@cheap_country"))
     );
 }
 
 private IWhereBuilder DreamCarExceptionCondition(IWhereBuilderFactory factory)
 {
-    return new WhereBuilderFactory(.And(
-        f => f.Compare(c => c.Compare<Car>(car => car.Mileage, Compare.LT, "@dream_mileage"),
-        f => f.Compare(c => c.Compare<Car>(car => car.Price, Compare.LT, "@dream_price"),
-        f => f.Compare(c => c.Compare<CarMaker>(maker => maker.Name, Compare.EQ, "@dream_maker"),
+    return factory.And(
+        f => f.Compare(c => c.Compare<Car>(car => car.Mileage, Compare.LT, "@dream_mileage")),
+        f => f.Compare(c => c.Compare<Car>(car => car.Price, Compare.LT, "@dream_price")),
+        f => f.Compare(c => c.Compare<CarMaker>(maker => maker.Name, Compare.EQ, "@dream_maker")),
     );
 }
 ```
