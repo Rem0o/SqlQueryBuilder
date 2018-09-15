@@ -1,6 +1,5 @@
 ﻿using System;
 using System.Collections.Generic;
-using System.ComponentModel;
 using System.Linq.Expressions;
 
 namespace SqlQueryBuilder
@@ -40,6 +39,7 @@ namespace SqlQueryBuilder
             var tableAliasKey = tableAlias ?? type.Name;
             TableFrom = new KeyValuePair<string, Type>(tableAliasKey, type);
             _translator.AddTable(type, TableFrom.Key);
+
             return this;
         }
 
