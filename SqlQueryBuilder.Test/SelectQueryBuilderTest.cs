@@ -1,4 +1,6 @@
+using SqlQueryBuilder.Select;
 using SqlQueryBuilder.Test.POCO;
+using SqlQueryBuilder.Where;
 using System;
 using Xunit;
 

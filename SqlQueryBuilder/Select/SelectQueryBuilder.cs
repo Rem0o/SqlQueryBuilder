@@ -1,8 +1,9 @@
-﻿using System;
+﻿using SqlQueryBuilder.Where;
+using System;
 using System.Collections.Generic;
 using System.Linq.Expressions;
 
-namespace SqlQueryBuilder
+namespace SqlQueryBuilder.Select
 {
     public class SelectQueryBuilder : IQueryBuilderSelectFrom, IQueryBuilderJoinOrSelect, IQueryBuilderSelectOrWhere
     {

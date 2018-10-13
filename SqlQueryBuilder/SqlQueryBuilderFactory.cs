@@ -1,4 +1,9 @@
-﻿using System;
+﻿using SqlQueryBuilder.Delete;
+using SqlQueryBuilder.Insert;
+using SqlQueryBuilder.Select;
+using SqlQueryBuilder.Update;
+using SqlQueryBuilder.Where;
+using System;
 
 namespace SqlQueryBuilder
 {

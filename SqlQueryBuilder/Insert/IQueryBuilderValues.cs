@@ -1,4 +1,4 @@
-﻿namespace SqlQueryBuilder
+﻿namespace SqlQueryBuilder.Insert
 {
     public interface IQueryBuilderValues
     {

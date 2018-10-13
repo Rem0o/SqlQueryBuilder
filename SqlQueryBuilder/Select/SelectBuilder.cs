@@ -1,7 +1,7 @@
 ﻿using System;
 using System.Linq.Expressions;
 
-namespace SqlQueryBuilder
+namespace SqlQueryBuilder.Select
 {
     public abstract class SelectBuilderBase : ISelectBuilder
     {

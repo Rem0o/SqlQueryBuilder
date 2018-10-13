@@ -1,5 +1,7 @@
-﻿using System;
-using System.Linq.Expressions;
+﻿using SqlQueryBuilder.Delete;
+using SqlQueryBuilder.Insert;
+using SqlQueryBuilder.Select;
+using SqlQueryBuilder.Update;
 
 namespace SqlQueryBuilder
 {
@@ -9,25 +11,5 @@ namespace SqlQueryBuilder
         IQueryBuilderUpdateFrom GetUpdate();
         IQueryBuilderInsertInto GetInsert();
         IQueryBuilderDeleteFrom GetDelete();
-    }
-
-    public interface IQueryBuilderSelectFrom
-    {
-        IQueryBuilderJoinOrSelect From<T>(string tableAlias = null);
-    }
-
-    public interface IQueryBuilderUpdateFrom
-    {
-        IQueryBuilderJoinOrSet<T> From<T>(string tableAlias = null);
-    }
-
-    public interface IQueryBuilderInsertInto
-    {
-        IQueryBuilderValues InsertInto<T>(Expression<Func<T, object>> lambda);
-    }
-
-    public interface IQueryBuilderDeleteFrom
-    {
-        IQueryBuilderJoinOrWhere DeleteFrom<T>(string tableAlias = null);
     }
 }

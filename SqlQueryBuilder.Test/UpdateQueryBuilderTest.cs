@@ -1,4 +1,6 @@
 ﻿using SqlQueryBuilder.Test.POCO;
+using SqlQueryBuilder.Update;
+using SqlQueryBuilder.Where;
 using System;
 using Xunit;
 
@@ -22,6 +24,14 @@ namespace SqlQueryBuilder.Test
 
             Assert.True(builder.TryBuild(out var query));
             Assert.True(CompareQueries("UPDATE [CAR] SET [CAR].[Mileage] = @mileage from [CAR]", query));
+        }
+
+        [Fact]
+        public void Update_NoSet_InvalidQuery()
+        {
+            var builder = GetBuilder().From<Car>().Set(null, null);
+
+            Assert.False(builder.TryBuild(out var query));
         }
 
         [Fact]

@@ -1,7 +1,7 @@
 ﻿using System;
 using System.Linq;
 
-namespace SqlQueryBuilder
+namespace SqlQueryBuilder.Where
 {
     public class WhereBuilderFactory: IWhereBuilderFactory, IWhereBuilder
     {

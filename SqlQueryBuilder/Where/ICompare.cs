@@ -1,7 +1,8 @@
-﻿using System;
+﻿using SqlQueryBuilder.Select;
+using System;
 using System.Linq.Expressions;
 
-namespace SqlQueryBuilder
+namespace SqlQueryBuilder.Where
 {
     public interface ICompare
     {

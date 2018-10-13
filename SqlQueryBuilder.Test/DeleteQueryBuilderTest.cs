@@ -1,6 +1,7 @@
-﻿using SqlQueryBuilder.Test.POCO;
+﻿using SqlQueryBuilder.Delete;
+using SqlQueryBuilder.Test.POCO;
+using SqlQueryBuilder.Where;
 using System;
-using System.Diagnostics;
 using Xunit;
 
 namespace SqlQueryBuilder.Test

@@ -1,4 +1,5 @@
 ﻿using SqlQueryBuilder.Test.POCO;
+using SqlQueryBuilder.Where;
 using Xunit;
 
 namespace SqlQueryBuilder.Test

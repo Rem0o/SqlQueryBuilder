@@ -1,7 +1,8 @@
-﻿using System;
+﻿using SqlQueryBuilder.Where;
+using System;
 using System.Linq.Expressions;
 
-namespace SqlQueryBuilder
+namespace SqlQueryBuilder.Delete
 {
     public interface IQueryBuilderJoinOrWhere: IQueryBuilderWhereOrBuild
     {

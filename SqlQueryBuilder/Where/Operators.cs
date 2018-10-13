@@ -1,4 +1,4 @@
-﻿namespace SqlQueryBuilder
+﻿namespace SqlQueryBuilder.Where
 {
     public static class Operators
     {

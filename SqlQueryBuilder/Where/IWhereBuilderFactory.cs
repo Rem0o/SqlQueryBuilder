@@ -1,6 +1,6 @@
 ﻿using System;
 
-namespace SqlQueryBuilder
+namespace SqlQueryBuilder.Where
 {
     public interface IWhereBuilderFactory
     {
