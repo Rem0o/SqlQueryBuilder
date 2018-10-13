@@ -62,6 +62,28 @@ WHERE [CarTableAlias].[Mileage] < 0
 ```
 Note the use of an alias for the "Car" table.
 
+### A basic INSERT INTO query
+
+An insert query is also straightforward.
+```c#
+bool isValid = GetBuilder().GetInsert()
+   .InsertInto<Car>(car => new {
+	car.Id,
+	car.ModelYear,
+	car.Mileage,
+	car.Price,
+	car.CarMakerId
+   }).Values("@id", "@modelYear", "@mileage", "@price", "@carMakerId")
+   .TryBuild(out string query);
+    
+```
+Resulting SQL:
+```sql
+INSERT INTO [CAR] 
+([Car].[Id], [Car].[ModelYear], [Car].[Mileage], [Car].[Price], [Car].[CarMakerId])
+VALUES (@id, @modelYear, @mileage, @price, @carMakerId)
+```
+
 ### Table alias
 
 You can use table aliases if you want to join the same table multiple times.
