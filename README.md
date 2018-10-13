@@ -1,7 +1,7 @@
 # SqlQueryBuilder [![Build Status](https://travis-ci.com/Rem0o/SqlQueryBuilder.svg?branch=master)](https://travis-ci.com/Rem0o/SqlQueryBuilder)
 
 ### Main features:
-  - Build all your Select or Update T-SQL queries arround your POCOs!
+  - Build all your Select/Update/Insert T-SQL queries arround your POCOs!
   - Fluent interface
   - Try-Build pattern (basic validation)
   - Evaluate once: use parameters ("@param") within the builder to parametrize your queries!
