@@ -42,14 +42,14 @@ namespace SqlQueryBuilder
             }
         }
 
-        public IEnumerable<string> Translate(Type type, Expression expression, string tableName)
+        public IEnumerable<string> Translate(Type type, Expression expression, string tableAlias)
         {
-            return NameOf(expression).Select(x => Translate(type, x, tableName));
+            return NameOf(expression).Select(x => Translate(type, x, tableAlias));
         }
 
-        public string GetFirstTranslation(Type type, Expression expression, string tableName)
+        public string GetFirstTranslation(Type type, Expression expression, string tableAlias)
         {
-            return NameOf(expression).Select(x => Translate(type, x, tableName)).FirstOrDefault();
+            return NameOf(expression).Select(x => Translate(type, x, tableAlias)).FirstOrDefault();
         }
 
         private IEnumerable<string> NameOf(Expression expression)

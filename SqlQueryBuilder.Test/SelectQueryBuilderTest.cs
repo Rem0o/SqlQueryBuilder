@@ -6,12 +6,12 @@ namespace SqlQueryBuilder.Test
 {
     public class SqlQueryBuilderTest
     {
-        private IQueryBuilderFrom GetBuilder()
+        private IQueryBuilderSelectFrom GetBuilder()
         {
             ISqlTranslator translator = new SqlTranslator();
             ICompare compareFactory() => new Comparator();
             IWhereBuilderFactory whereBuilderFactory() => new WhereBuilderFactory(compareFactory);
-            return new Builder(translator, whereBuilderFactory, compareFactory);
+            return new SqlQueryBuilderFactory(translator, whereBuilderFactory, compareFactory).GetSelect();
         }
 
         [Fact]

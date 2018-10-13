@@ -4,7 +4,7 @@ using System.Linq.Expressions;
 
 namespace SqlQueryBuilder
 {
-    public class Builder : IQueryBuilderFrom, IQueryBuilderJoinOrSelect, IQueryBuilderSelectOrWhere
+    public class SelectQueryBuilder : IQueryBuilderSelectFrom, IQueryBuilderJoinOrSelect, IQueryBuilderSelectOrWhere
     {
         private readonly Func<IWhereBuilderFactory> _createWhereBuilderFactory;
         private readonly Func<ICompare> _compareFactory;
@@ -18,7 +18,7 @@ namespace SqlQueryBuilder
         private List<string> OrderByClauses = new List<string>();
         private List<string> GroupByClauses = new List<string>();
 
-        private Builder SkipIfError(Action action)
+        private SelectQueryBuilder SkipIfError(Action action)
         {
             if (!_translator.HasError)
                 action();
@@ -26,7 +26,7 @@ namespace SqlQueryBuilder
             return this;
         }
 
-        public Builder(ISqlTranslator translator, Func<IWhereBuilderFactory> createWhereBuilderFactory, Func<ICompare> compareFactory)
+        public SelectQueryBuilder(ISqlTranslator translator, Func<IWhereBuilderFactory> createWhereBuilderFactory, Func<ICompare> compareFactory)
         {
             this._translator = translator;
             this._createWhereBuilderFactory = createWhereBuilderFactory;
