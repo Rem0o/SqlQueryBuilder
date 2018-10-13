@@ -18,10 +18,10 @@ Here is a basic factory method to get a builder. This factory method can be regi
 ```c#
 private IQueryBuilderFactory GetBuilder()
 {
-	ISqlTranslator translator = new SqlTranslator();
-	ICompare compareFactory() => new Comparator();
-	IWhereBuilderFactory whereBuilderFactory() => new WhereBuilderFactory(compareFactory);
-	return new SqlQueryBuilderFactory(translator, whereBuilderFactory, compareFactory);
+    ISqlTranslator translator = new SqlTranslator();
+    ICompare compareFactory() => new Comparator();
+    IWhereBuilderFactory whereBuilderFactory() => new WhereBuilderFactory(compareFactory);
+    return new SqlQueryBuilderFactory(translator, whereBuilderFactory, compareFactory);
 }
 ```
 

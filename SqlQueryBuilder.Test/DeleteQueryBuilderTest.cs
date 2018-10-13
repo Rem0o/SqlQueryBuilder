@@ -23,7 +23,7 @@ namespace SqlQueryBuilder.Test
             Assert.True(builder.TryBuild(out var query));
 
             var expectedQuery = "DELETE FROM [CAR]";
-            Assert.True(CompareQueries(expectedQuery, query));
+            AssertCompareQueries(expectedQuery, query);
         }
 
         [Fact]
@@ -35,7 +35,7 @@ namespace SqlQueryBuilder.Test
             Assert.True(builder.TryBuild(out var query));
 
             var expectedQuery = "DELETE FROM [CAR] JOIN [CARMAKER] ON [CAR].[CarMakerId] = [CarMaker].[Id]";
-            Assert.True(CompareQueries(expectedQuery, query));
+            AssertCompareQueries(expectedQuery, query);
         }
 
         [Fact]
@@ -54,7 +54,7 @@ namespace SqlQueryBuilder.Test
                 + "JOIN [CarMaker] ON [Car].[CarMakerId] = [CarMaker].[Id] "
                 + "WHERE ((([CarMaker].[FoundationDate]) < (1950-01-01)) OR (([Car].[Mileage]) <= (50000)))";
 
-            Assert.True(CompareQueries(expectedQuery, query));
+            AssertCompareQueries(expectedQuery, query);
         }
 
         [Fact]
@@ -87,10 +87,13 @@ namespace SqlQueryBuilder.Test
             return factory.Compare(c => c.Compare<Country>(country => country.Name).With(Operators.LIKE, "Germany"));
         }
 
-        private bool CompareQueries(string first, string second)
+        private void AssertCompareQueries(string first, string second)
         {
             string prep(string s) => s.Trim().ToUpperInvariant().Replace(Environment.NewLine, " ");
-            return prep(first) == prep(second);
+            string prepFirst = prep(first),
+                prepSecond = prep(second);
+
+            Assert.Equal(prepFirst, prepSecond);
         }
     }
 }
