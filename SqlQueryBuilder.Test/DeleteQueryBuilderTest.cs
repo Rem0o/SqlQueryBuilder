@@ -44,7 +44,7 @@ namespace SqlQueryBuilder.Test
             var builder = GetBuilder().DeleteFrom<Car>()
                 .Join<Car, CarMaker>(car => car.CarMakerId, carMaker => carMaker.Id)
                 .WhereFactory(f => f.Or(
-                    f1 => f1.Compare(c => c.Compare<CarMaker>(m => m.FoundationDate).With(Operators.LT, new DateTime(1950, 01, 01).ToShortDateString())),
+                    f1 => f1.Compare(c => c.Compare<CarMaker>(m => m.FoundationDate).With(Operators.LT, "1950-01-01")),
                     f2 => f2.Compare(c => c.Compare<Car>(car => car.Mileage).With(Operators.LTE, 50_000.ToString()))
                 ));
 
