@@ -1,7 +1,7 @@
 # SqlQueryBuilder [![Build Status](https://travis-ci.com/Rem0o/SqlQueryBuilder.svg?branch=master)](https://travis-ci.com/Rem0o/SqlQueryBuilder)
 
 ### Main features:
-  - Build all your Select/Update/Insert T-SQL queries arround your POCOs!
+  - Build all your Select/Update/Insert/Delete T-SQL queries arround your POCOs!
   - Fluent interface
   - Try-Build pattern (basic validation)
   - Evaluate once: use parameters ("@param") within the builder to parametrize your queries!
@@ -89,11 +89,11 @@ VALUES (@id, @modelYear, @mileage, @price, @carMakerId)
 By now you should expect the delete query to be just as simple. But here's a taste of more advanced features.
 ```c#
 bool isValid = GetBuilder().GetDelete().DeleteFrom<Car>()
-	.Join<Car, CarMaker>(car => car.CarMakerId, carMaker => carMaker.Id)
-	.WhereFactory(f => f.Or(
-		f1 => f1.Compare(c => c.Compare<CarMaker>(m => m.FoundationDate).With(Operators.LT, new DateTime(1950, 01, 01).ToShortDateString())),
-		f2 => f2.Compare(c => c.Compare<Car>(car => car.Mileage).With(Operators.LTE, 50_000.ToString()))
-	));
+    .Join<Car, CarMaker>(car => car.CarMakerId, carMaker => carMaker.Id)
+    .WhereFactory(f => f.Or(
+        f1 => f1.Compare(c => c.Compare<CarMaker>(m => m.FoundationDate).With(Operators.LT, new DateTime(1950, 01, 01).ToShortDateString())),
+        f2 => f2.Compare(c => c.Compare<Car>(car => car.Mileage).With(Operators.LTE, 50_000.ToString()))
+    ));
     
 ```
 Resulting SQL:
