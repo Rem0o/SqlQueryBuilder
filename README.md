@@ -16,7 +16,7 @@
 
 Here is a basic factory method to get a builder. This factory method can be registered into any container library. 
 ```c#
-private IQueryBuilderFactory GetSelectBuilder()
+private IQueryBuilderFactory GetBuilder()
 {
 	ISqlTranslator translator = new SqlTranslator();
 	ICompare compareFactory() => new Comparator();
@@ -84,6 +84,25 @@ INSERT INTO [CAR]
 VALUES (@id, @modelYear, @mileage, @price, @carMakerId)
 ```
 
+### A DELETE query
+
+By now you should expect the delete query to be just as simple. But here's a taste of more advanced features.
+```c#
+bool isValid = GetBuilder().GetDelete().DeleteFrom<Car>()
+	.Join<Car, CarMaker>(car => car.CarMakerId, carMaker => carMaker.Id)
+	.WhereFactory(f => f.Or(
+		f1 => f1.Compare(c => c.Compare<CarMaker>(m => m.FoundationDate).With(Operators.LT, new DateTime(1950, 01, 01).ToShortDateString())),
+		f2 => f2.Compare(c => c.Compare<Car>(car => car.Mileage).With(Operators.LTE, 50_000.ToString()))
+	));
+    
+```
+Resulting SQL:
+```sql
+DELETE FROM [Car]
+JOIN [CarMaker] ON [Car].[CarMakerId] = [CarMaker].[Id] 
+WHERE ((([CarMaker].[FoundationDate]) < (1950-01-01)) OR (([Car].[Mileage]) <= (50000)))
+```
+
 ### Table alias
 
 You can use table aliases if you want to join the same table multiple times.
@@ -128,7 +147,7 @@ JOIN [CarMaker] ON [Car].[CarMakerId] = [CarMaker].[Id]
 GROUP BY [Car].[ModelYear], [CarMaker].[Name]
 ```
 
-A complex selector is described as a class. Simply inherit SelectBuilder<T> to create your own easily. The generic type \<T\> will enforce (or not using object) a specific type on your special selector. For example, here is a DATEDIFF implementation that requires the selector to be of a DateTime type.
+A complex selector is described as a class. Simply inherit SelectBuilder<T> to create your own easily. The generic type \<T\> will enforce (or not using object) a specific type on your special selector. For example, here is a "DATEDIFF" implementation that requires the selector to be of a DateTime type.
 ```c#
 // definition
 public class DateDiff : SelectBuilder<DateTime>
@@ -160,7 +179,7 @@ Resulting SQL:
 DATEDIFF(YEAR, '2018-01-01', [CarMaker].[FoundationDate])
 ```
 
-### Where is the fun?
+### WHERE is the fun?
 
 People's car tastes can be all over the place, and so can be your "WHERE" clauses! Here are some "WHERE" conditions extracted as functions so we can use them later.
 ```c#

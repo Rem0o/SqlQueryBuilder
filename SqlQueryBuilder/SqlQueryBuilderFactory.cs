@@ -29,5 +29,10 @@ namespace SqlQueryBuilder
         {
             return new InsertQueryBuilder(_translator);
         }
+
+        public IQueryBuilderDeleteFrom GetDelete()
+        {
+            return new DeleteQueryBuilder(_translator, _createWhereBuilderFactory, _compareFactory);
+        }
     }
 }

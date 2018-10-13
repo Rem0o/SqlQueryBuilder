@@ -127,7 +127,7 @@ namespace SqlQueryBuilder
             const string separator = ", ";
             var setString = string.Join(separator, SetClauses);
 
-            query = $"UPDATE [{tableAlias}] SET {setString} FROM [{tableName}] [{tableAlias}] "
+            query = $"UPDATE [{tableAlias}] SET {setString} FROM [{tableName}] {(tableAlias != tableName ? $"[{tableAlias}] " : string.Empty)}"
                 + (JoinClauses.Count > 0 ? string.Join(" ", JoinClauses) + " " : string.Empty)
                 + (WhereClauses.Count > 0 ? $"WHERE {string.Join(" AND ", WhereClauses)} " : string.Empty);
 

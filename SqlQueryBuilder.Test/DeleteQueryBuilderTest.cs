@@ -4,64 +4,54 @@ using Xunit;
 
 namespace SqlQueryBuilder.Test
 {
-    public class UpdateQueryBuilderTest
+    public class DeleteQueryBuilderTest
     {
-        private IQueryBuilderUpdateFrom GetBuilder()
+        private IQueryBuilderDeleteFrom GetBuilder()
         {
             ISqlTranslator translator = new SqlTranslator();
             ICompare compareFactory() => new Comparator();
             IWhereBuilderFactory whereBuilderFactory() => new WhereBuilderFactory(compareFactory);
-            return new SqlQueryBuilderFactory(translator, whereBuilderFactory, compareFactory).GetUpdate();
+            return new SqlQueryBuilderFactory(translator, whereBuilderFactory, compareFactory).GetDelete();
         }
 
         [Fact]
-        public void Update_SetFrom_ValidQuery()
+        public void DeleteFrom_ValidQuery()
         {
-            var builder = GetBuilder().From<Car>()
-                .Set(car => car.Mileage, "@mileage");
-
-            Assert.True(builder.TryBuild(out var query));
-            Assert.True(CompareQueries("UPDATE [CAR] SET [CAR].[Mileage] = @mileage from [CAR]", query));
-        }
-
-        [Fact]
-        public void Update_SetFromJoin_ValidQuery()
-        {
-            var builder = GetBuilder().From<Car>()
-                .Join<Car, CarMaker>(car => car.CarMakerId, maker => maker.Id)
-                .Join<CarMaker, Country>(maker => maker.CountryOfOriginId, country => country.Id)
-                .Set(car => car.Mileage, "@mileage");
+            var builder = GetBuilder().DeleteFrom<Car>();
 
             Assert.True(builder.TryBuild(out var query));
 
-            var expectedQuery = "UPDATE [CAR] SET [CAR].[Mileage] = @mileage from [CAR]" + 
-                "JOIN [CarMaker] on [Car].[CarMakerId] = [CarMaker].[Id] " +
-                "JOIN [Country] on [CarMaker].[CountryOfOriginId] = [Country].[Id]";
-
+            var expectedQuery = "DELETE FROM [CAR]";
             Assert.True(CompareQueries(expectedQuery, query));
         }
 
         [Fact]
-        public void Update_SetFromJoinSameAlias_InvalidQuery()
+        public void DeleteFrom_Join_ValidQuery()
         {
-            var builder = GetBuilder().From<Car>("Alias")
-                .Join<Car, Car>(car => car.CarMakerId, maker => maker.Id, "Alias", "Alias")
-                .Set(car => car.Mileage, "@mileage");
-
-            Assert.False(builder.TryBuild(out var query));
-        }
-
-        [Fact]
-        public void Update_SetFromWhere_ValidQuery()
-        {
-            var builder = GetBuilder().From<Car>()
-               .Set(car => car.Mileage, "@mileage")
-               .Where(c => c.Compare<Car>(car => car.Mileage).With(Operators.LT, "0"));
+            var builder = GetBuilder().DeleteFrom<Car>()
+                .Join<Car, CarMaker>(car => car.CarMakerId, carMaker => carMaker.Id);
 
             Assert.True(builder.TryBuild(out var query));
 
-            var expectedQuery = "UPDATE [CAR] SET [CAR].[Mileage] = @mileage from [CAR]" +
-                "WHERE (([CAR].[Mileage]) < (0))";
+            var expectedQuery = "DELETE FROM [CAR] JOIN [CARMAKER] ON [CAR].[CarMakerId] = [CarMaker].[Id]";
+            Assert.True(CompareQueries(expectedQuery, query));
+        }
+
+        [Fact]
+        public void DeleteFrom_JoinWhere_ValidQuery()
+        {
+            var builder = GetBuilder().DeleteFrom<Car>()
+                .Join<Car, CarMaker>(car => car.CarMakerId, carMaker => carMaker.Id)
+                .WhereFactory(f => f.Or(
+                    f1 => f1.Compare(c => c.Compare<CarMaker>(m => m.FoundationDate).With(Operators.LT, new DateTime(1950, 01, 01).ToShortDateString())),
+                    f2 => f2.Compare(c => c.Compare<Car>(car => car.Mileage).With(Operators.LTE, 50_000.ToString()))
+                ));
+
+            Assert.True(builder.TryBuild(out var query));
+
+            var expectedQuery = "DELETE FROM [Car] "
+                + "JOIN [CarMaker] ON [Car].[CarMakerId] = [CarMaker].[Id] "
+                + "WHERE ((([CarMaker].[FoundationDate]) < (1950-01-01)) OR(([Car].[Mileage]) <= (50000)))";
 
             Assert.True(CompareQueries(expectedQuery, query));
         }
@@ -80,8 +70,7 @@ namespace SqlQueryBuilder.Test
 
             Assert.False(whereIsValid, "The where clause needs to be invalid");
 
-            var basicQuery = GetBuilder().From<Car>()
-                .Set(car => car.Mileage, "@value");
+            var basicQuery = GetBuilder().DeleteFrom<Car>();
 
             Assert.True(basicQuery.TryBuild(out _), "The basic query should be valid");
 

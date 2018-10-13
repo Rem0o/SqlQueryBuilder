@@ -8,6 +8,7 @@ namespace SqlQueryBuilder
         IQueryBuilderSelectFrom GetSelect();
         IQueryBuilderUpdateFrom GetUpdate();
         IQueryBuilderInsertInto GetInsert();
+        IQueryBuilderDeleteFrom GetDelete();
     }
 
     public interface IQueryBuilderSelectFrom
@@ -23,5 +24,10 @@ namespace SqlQueryBuilder
     public interface IQueryBuilderInsertInto
     {
         IQueryBuilderValues InsertInto<T>(Expression<Func<T, object>> lambda);
+    }
+
+    public interface IQueryBuilderDeleteFrom
+    {
+        IQueryBuilderJoinOrWhere DeleteFrom<T>(string tableAlias = null);
     }
 }
