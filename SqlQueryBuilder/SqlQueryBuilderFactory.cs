@@ -24,5 +24,10 @@ namespace SqlQueryBuilder
         {
             return new UpdateQueryBuilder(_translator, _createWhereBuilderFactory, _compareFactory);
         }
+
+        public IQueryBuilderInsertInto GetInsert()
+        {
+            return new InsertQueryBuilder(_translator);
+        }
     }
 }
