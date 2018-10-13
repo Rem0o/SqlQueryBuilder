@@ -102,7 +102,7 @@ namespace SqlQueryBuilder
 
             query = $"DELETE FROM [{tableName}] {(tableAlias != tableName ? $"[{tableAlias}]" : string.Empty)}"
                 + (JoinClauses.Count > 0 ? string.Join(" ", JoinClauses) + " " : string.Empty)
-                + (WhereClauses.Count > 0 ? $" WHERE {string.Join(" AND ", WhereClauses)} " : string.Empty);
+                + (WhereClauses.Count > 0 ? $"WHERE {string.Join(" AND ", WhereClauses)} " : string.Empty);
 
             return true;
         }

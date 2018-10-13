@@ -1,5 +1,6 @@
 ﻿using SqlQueryBuilder.Test.POCO;
 using System;
+using System.Diagnostics;
 using Xunit;
 
 namespace SqlQueryBuilder.Test
@@ -51,7 +52,7 @@ namespace SqlQueryBuilder.Test
 
             var expectedQuery = "DELETE FROM [Car] "
                 + "JOIN [CarMaker] ON [Car].[CarMakerId] = [CarMaker].[Id] "
-                + "WHERE ((([CarMaker].[FoundationDate]) < (1950-01-01)) OR(([Car].[Mileage]) <= (50000)))";
+                + "WHERE ((([CarMaker].[FoundationDate]) < (1950-01-01)) OR (([Car].[Mileage]) <= (50000)))";
 
             Assert.True(CompareQueries(expectedQuery, query));
         }
@@ -88,7 +89,7 @@ namespace SqlQueryBuilder.Test
 
         private bool CompareQueries(string first, string second)
         {
-            string prep(string s) => s.Trim().ToUpperInvariant().Replace(" ", string.Empty).Replace(Environment.NewLine, string.Empty);
+            string prep(string s) => s.Trim().ToUpperInvariant().Replace(Environment.NewLine, " ");
             return prep(first) == prep(second);
         }
     }

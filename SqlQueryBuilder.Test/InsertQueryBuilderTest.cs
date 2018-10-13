@@ -37,7 +37,7 @@ namespace SqlQueryBuilder.Test
 
         private bool CompareQueries(string first, string second)
         {
-            string prep(string s) => s.Trim().ToUpperInvariant().Replace(" ", string.Empty).Replace(Environment.NewLine, string.Empty);
+            string prep(string s) => s.Trim().ToUpperInvariant().Replace(Environment.NewLine, " ");
             return prep(first) == prep(second);
         }
     }
