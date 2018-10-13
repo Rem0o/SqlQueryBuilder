@@ -167,19 +167,19 @@ People's car tastes can be all over the place, and so can be your "WHERE" clause
 private IWhereBuilder CheapCarCondition(IWhereBuilderFactory factory)
 {
     return factory.And(
-        f => f.Compare(c => c.Compare<Car>(car => car.Mileage, Compare.LT, "@cheap_mileage")),
-        f => f.Compare(c => c.Compare<Car>(car => car.Price, Compare.LT, "@cheap_price")),
-        f => f.Compare(c => c.Compare<CarMaker>(maker => => maker.Name, Compare.NEQ, "@cheap_name")),
-        f => f.Compare(c => c.Compare<Country>(country => country.Name, Compare.NEQ, "@cheap_country"))
+        f => f.Compare(c => c.Compare<Car>(car => car.Mileage).With(Compare.LT, "@cheap_mileage")),
+        f => f.Compare(c => c.Compare<Car>(car => car.Price).With(Compare.LT, "@cheap_price")),
+        f => f.Compare(c => c.Compare<CarMaker>(maker => => maker.Name).With(Compare.NEQ, "@cheap_name")),
+        f => f.Compare(c => c.Compare<Country>(country => country.Name).With(Compare.NEQ, "@cheap_country"))
     );
 }
 
 private IWhereBuilder DreamCarExceptionCondition(IWhereBuilderFactory factory)
 {
     return factory.And(
-        f => f.Compare(c => c.Compare<Car>(car => car.Mileage, Compare.LT, "@dream_mileage")),
-        f => f.Compare(c => c.Compare<Car>(car => car.Price, Compare.LT, "@dream_price")),
-        f => f.Compare(c => c.Compare<CarMaker>(maker => maker.Name, Compare.EQ, "@dream_maker")),
+        f => f.Compare(c => c.Compare<Car>(car => car.Mileage).With(Compare.LT, "@dream_mileage")),
+        f => f.Compare(c => c.Compare<Car>(car => car.Price).With(Compare.LT, "@dream_price")),
+        f => f.Compare(c => c.Compare<CarMaker>(maker => maker.Name).With(Compare.EQ, "@dream_maker"))
     );
 }
 ```
