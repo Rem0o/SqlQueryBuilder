@@ -10,10 +10,10 @@ namespace SqlQueryBuilder.Test
     {
         private IQueryBuilderSelectFrom GetBuilder()
         {
-            ISqlTranslator translator = new SqlTranslator();
+            ISqlTranslator translatorFactory() => new SqlTranslator();
             ICompare compareFactory() => new Comparator();
             IWhereBuilderFactory whereBuilderFactory() => new WhereBuilderFactory(compareFactory);
-            return new SqlQueryBuilderFactory(translator, whereBuilderFactory, compareFactory).GetSelect();
+            return new SqlQueryBuilderFactory(translatorFactory, whereBuilderFactory, compareFactory).GetSelect();
         }
 
         [Fact]

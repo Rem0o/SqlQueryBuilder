@@ -18,10 +18,10 @@ Here is a basic factory method to get a builder. This factory method can be regi
 ```c#
 private IQueryBuilderFactory GetBuilder()
 {
-    ISqlTranslator translator = new SqlTranslator();
+    ISqlTranslator translatorFactory() => new SqlTranslator();
     ICompare compareFactory() => new Comparator();
     IWhereBuilderFactory whereBuilderFactory() => new WhereBuilderFactory(compareFactory);
-    return new SqlQueryBuilderFactory(translator, whereBuilderFactory, compareFactory);
+    return new SqlQueryBuilderFactory(translatorFactory, whereBuilderFactory, compareFactory);
 }
 ```
 
@@ -50,8 +50,7 @@ An update query is just as simple.
 bool isValid = GetBuilder().GetUpdate().From<Car>("CarTableAlias")
    .Set(car => car.Mileage, "@mileage")
    .Where(c => c.Compare<Car>(car => car.Mileage).With(Operators.LT, "0"))
-   .TryBuild(out string query);
-    
+   .TryBuild(out string query); 
 ```
 Resulting SQL:
 ```sql
@@ -74,8 +73,7 @@ bool isValid = GetBuilder().GetInsert()
 	car.Price,
 	car.CarMakerId
    }).Values("@id", "@modelYear", "@mileage", "@price", "@carMakerId")
-   .TryBuild(out string query);
-    
+   .TryBuild(out string query);  
 ```
 Resulting SQL:
 ```sql
@@ -94,7 +92,6 @@ bool isValid = GetBuilder().GetDelete().DeleteFrom<Car>()
         f1 => f1.Compare(c => c.Compare<CarMaker>(m => m.FoundationDate).With(Operators.LT, new DateTime(1950, 01, 01).ToShortDateString())),
         f2 => f2.Compare(c => c.Compare<Car>(car => car.Mileage).With(Operators.LTE, 50_000.ToString()))
     ));
-    
 ```
 Resulting SQL:
 ```sql
@@ -116,7 +113,6 @@ var isValid = GetBuilder().GetSelect().From<CarMaker>(TABLE1)
     .SelectAll<CarMaker>(TABLE1)
     .Where(comparator => comparator.Compare<CarMaker>(maker1 => maker1.Id, TABLE1).With<CarMaker>(Operators.NEQ, maker2 => maker2.Id, TABLE2))
     .TryBuild(out string query);
-    
 ```
 Resulting SQL:
 ```sql

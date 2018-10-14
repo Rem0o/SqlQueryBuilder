@@ -10,10 +10,10 @@ namespace SqlQueryBuilder.Test
     {
         private IQueryBuilderDeleteFrom GetBuilder()
         {
-            ISqlTranslator translator = new SqlTranslator();
+            ISqlTranslator translatorFactory() => new SqlTranslator();
             ICompare compareFactory() => new Comparator();
             IWhereBuilderFactory whereBuilderFactory() => new WhereBuilderFactory(compareFactory);
-            return new SqlQueryBuilderFactory(translator, whereBuilderFactory, compareFactory).GetDelete();
+            return new SqlQueryBuilderFactory(translatorFactory, whereBuilderFactory, compareFactory).GetDelete();
         }
 
         [Fact]

@@ -11,16 +11,15 @@ namespace SqlQueryBuilder.Test
     {
         private IQueryBuilderInsertInto GetBuilder()
         {
-            ISqlTranslator translator = new SqlTranslator();
+            ISqlTranslator translatorFactory() => new SqlTranslator();
             ICompare compareFactory() => new Comparator();
             IWhereBuilderFactory whereBuilderFactory() => new WhereBuilderFactory(compareFactory);
-            return new SqlQueryBuilderFactory(translator, whereBuilderFactory, compareFactory).GetInsert();
+            return new SqlQueryBuilderFactory(translatorFactory, whereBuilderFactory, compareFactory).GetInsert();
         }
 
         [Fact]
         public void InsertInto_ValidQuery()
         {
-
             var builder = GetBuilder().InsertInto<Car>(car => new
             {
                 car.Id,
