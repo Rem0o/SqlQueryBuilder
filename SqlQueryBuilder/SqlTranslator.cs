@@ -18,7 +18,7 @@ namespace SqlQueryBuilder
                 HasError = true;
                 return false;
             }
-                
+
             Tables.Add(alias, type);
             return true;
         }
@@ -34,7 +34,10 @@ namespace SqlQueryBuilder
             });
 
             if (kv.Key != null)
-                return $"[{kv.Key}].{(col == "*" ? "*" : $"[{col}]")}";
+            {
+                var sql = $"[{kv.Key}].{(col == "*" ? "*" : $"[{col}]")}";
+                return sql;
+            }
             else
             {
                 HasError = true;

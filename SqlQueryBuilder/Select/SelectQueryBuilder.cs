@@ -18,6 +18,7 @@ namespace SqlQueryBuilder.Select
         private List<string> JoinClauses = new List<string>();
         private List<string> OrderByClauses = new List<string>();
         private List<string> GroupByClauses = new List<string>();
+        private List<int> SkipTakeClauses = new List<int>();
 
         private SelectQueryBuilder SkipIfError(Action action)
         {
@@ -84,7 +85,7 @@ namespace SqlQueryBuilder.Select
         {
             TopClause = i;
         });
-        
+
         public IQueryBuilderSelectOrWhere SelectAll<T>(string tableAlias = null) =>
             SkipIfError(() =>
                 SelectClauses.Add(_translator.Translate(typeof(T), "*", tableAlias))
@@ -112,16 +113,16 @@ namespace SqlQueryBuilder.Select
                     .TryBuild(_translator, out string comparison);
 
                 if (success)
-                    WhereClauses.Add(comparison);   
+                    WhereClauses.Add(comparison);
             });
-            
+
         public IQueryBuilderWhere WhereFactory(Func<IWhereBuilderFactory, IWhereBuilder> whereBuilder) =>
             SkipIfError(() =>
             {
                 var success = whereBuilder(_createWhereBuilderFactory()).TryBuild(_translator, out var whereClause);
 
                 if (success)
-                    WhereClauses.Add(whereClause); 
+                    WhereClauses.Add(whereClause);
             });
 
         public IQueryBuilderGroupBy GroupBy<T>(Expression<Func<T, object>> lambda, string tableAlias = null) =>
@@ -133,6 +134,12 @@ namespace SqlQueryBuilder.Select
             SkipIfError(() =>
                 OrderByClauses.Add($"{_translator.GetFirstTranslation(typeof(T), lambda, tableAlias)}{(desc ? " DESC" : string.Empty)}")
             );
+
+        public IQueryBuilderOrderBy SkipTake(int skip, int take) => SkipIfError(() =>
+        {
+            SkipTakeClauses.Add(skip);
+            SkipTakeClauses.Add(take);
+        });
 
         public bool TryBuild(out string query)
         {
@@ -147,11 +154,12 @@ namespace SqlQueryBuilder.Select
             const string separator = ", ";
             var selectString = string.Join(separator, SelectClauses);
 
-            query = $"SELECT {(TopClause > 0 ? $"TOP {TopClause} ": "")}{selectString} FROM [{tableName}] {(tableAlias != tableName ? $"AS [{tableAlias}] " : string.Empty)}"
+            query = $"SELECT {(TopClause > 0 ? $"TOP {TopClause} " : "")}{selectString} FROM [{tableName}] {(tableAlias != tableName ? $"AS [{tableAlias}] " : string.Empty)}"
                 + (JoinClauses.Count > 0 ? string.Join(" ", JoinClauses) + " " : string.Empty)
                 + (WhereClauses.Count > 0 ? $"WHERE {string.Join(" AND ", WhereClauses)} " : string.Empty)
                 + (GroupByClauses.Count > 0 ? $"GROUP BY {string.Join(separator, GroupByClauses)} " : string.Empty)
-                + (OrderByClauses.Count > 0 ? $"ORDER BY {string.Join(separator, OrderByClauses)} " : string.Empty);
+                + (OrderByClauses.Count > 0 ? $"ORDER BY {string.Join(separator, OrderByClauses)} " : string.Empty)
+                + (SkipTakeClauses.Count > 0 ? $"OFFSET {SkipTakeClauses[0]} ROWS FETCH NEXT {SkipTakeClauses[1]} ROWS ONLY " : string.Empty);
 
             query = query.Trim();
 
@@ -171,5 +179,7 @@ namespace SqlQueryBuilder.Select
 
             return true;
         }
+
+
     }
 }
