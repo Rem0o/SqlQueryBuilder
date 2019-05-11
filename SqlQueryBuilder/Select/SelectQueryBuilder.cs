@@ -137,8 +137,7 @@ namespace SqlQueryBuilder.Select
 
         public IQueryBuilderOrderBy SkipTake(int skip, int take) => SkipIfError(() =>
         {
-            SkipTakeClauses.Add(skip);
-            SkipTakeClauses.Add(take);
+            SkipTakeClauses.AddRange(new List<int>() { skip, take });
         });
 
         public bool TryBuild(out string query)
