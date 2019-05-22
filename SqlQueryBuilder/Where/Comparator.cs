@@ -1,60 +1,87 @@
 ﻿using SqlQueryBuilder.Select;
 using System;
-using System.Linq;
 using System.Linq.Expressions;
 
 namespace SqlQueryBuilder.Where
 {
     public class Comparator : ICompare, ICompareWith, ICompareBuilder
     {
-        private Func<ISqlTranslator, string> _first;
-        private Func<ISqlTranslator, string> _second;
+        private delegate bool TranslateDelegate(ISqlTranslator translator, out string str);
+
+        private TranslateDelegate _first;
+        private TranslateDelegate _second;
         private string _operator;
 
         public ICompareWith Compare(string val)
         {
-            _first = _ => val;
+            bool translateFunction (ISqlTranslator translator, out string str)
+            {
+                str = val;
+                return !translator.HasError;
+            }
+
+            _first = translateFunction;
             return this;
         }
 
         public ICompareWith Compare<U>(Expression<Func<U, object>> lambda, string tableAlias = null)
         {
-            _first = t => t.GetFirstTranslation(typeof(U), lambda, tableAlias);
+            bool translateFunction(ISqlTranslator translator, out string str)
+            {
+                str = translator.GetFirstTranslation(typeof(U), lambda, tableAlias);
+                return !translator.HasError;
+            }
+
+            _first = translateFunction;
             return this;
         }
 
         public ICompareWith Compare(ISelectBuilder selectBuilder)
         {
-            _first = t => {
-                selectBuilder.TryBuild(t, out string str);
-                return str;
-            };
+            bool translateFunction(ISqlTranslator translator, out string str)
+            {
+                return selectBuilder.TryBuild(translator, out str) && !translator.HasError;
+            }
 
+            _first = translateFunction;
             return this;
         }
 
         public ICompareBuilder With(string op, string val)
         {
             _operator = op;
-            _second = _ => val;
+            bool translateFunction(ISqlTranslator translator, out string str)
+            {
+                str = val;
+                return !translator.HasError;
+            }
+
+            _second = translateFunction;
             return this;
         }
 
         public ICompareBuilder With<U>(string op, Expression<Func<U, object>> lambda, string tableAlias = null)
         {
             _operator = op;
-            _second = t => t.GetFirstTranslation(typeof(U), lambda, tableAlias);
+            bool translateFunction(ISqlTranslator translator, out string str)
+            {
+                str = translator.GetFirstTranslation(typeof(U), lambda, tableAlias);
+                return !translator.HasError;
+            }
+
+            _second = translateFunction;
             return this;
         }
 
         public ICompareBuilder With(string op, ISelectBuilder selectBuilder)
         {
             _operator = op;
-            _second = t => {
-                selectBuilder.TryBuild(t, out string str);
-                return str;
-            };
+            bool translateFunction(ISqlTranslator translator, out string str)
+            {
+                return selectBuilder.TryBuild(translator, out str) && !translator.HasError;
+            }
 
+            _second = translateFunction;
             return this;
         }
 
@@ -62,14 +89,17 @@ namespace SqlQueryBuilder.Where
 
         public bool TryBuild(ISqlTranslator translator, out string comparison)
         {
-            comparison = "";
-            string val1 = _first(translator);
-            string val2 = _second(translator);
+            comparison = string.Empty;
 
-            if (new[] { val1, val2, _operator }.Any(string.IsNullOrEmpty))
+            if (
+                !_first(translator, out string str1)  || 
+                !_second(translator, out string str2) || 
+                string.IsNullOrEmpty(_operator))
+            {
                 return false;
+            }
 
-            comparison = WrapWithParentheses($"{WrapWithParentheses(val1)} {_operator} {WrapWithParentheses(val2)}");
+            comparison = WrapWithParentheses($"{WrapWithParentheses(str1)} {_operator} {WrapWithParentheses(str2)}");
             return true;
         }
     }
