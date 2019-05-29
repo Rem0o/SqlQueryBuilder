@@ -37,18 +37,42 @@ namespace SqlQueryBuilder.Test
         public void SelectFrom_POCO_With_Skip_Take_ValidQuery()
         {
             var isValid = GetBuilder().From<Car>()
-                .Join<Car, CarMaker>(car => car.CarMakerId, maker => maker.Id)
                 .SelectAll<Car>()
-                .Where(c => c.Compare<CarMaker>(maker => maker.Name).With(Operators.EQ, "@brand"))
-                .OrderBy<CarMaker>(maker => maker.FoundationDate, desc: true)
-                .SkipTake(10, 10)
+                .OrderBy<Car>(car => car.ModelYear)
+                .Skip(10).Take(10)
                 .TryBuild(out var query);
 
             Assert.True(isValid, "The query should be valid");
 
-            var expectedQuery = $"SELECT [Car].* FROM [Car] JOIN [CarMaker] ON [Car].[CarMakerId] = [CarMaker].[Id] "
-                + "WHERE (([CarMaker].[Name]) = (@brand)) ORDER BY [CarMaker].[FoundationDate] DESC OFFSET 10 ROWS FETCH NEXT 10 ROWS ONLY ";
+            var expectedQuery = $"SELECT [Car].* FROM [Car] ORDER BY [Car].[ModelYear] OFFSET 10 ROWS FETCH NEXT 10 ROWS ONLY ";
             Assert.True(CompareQueries(expectedQuery, query));
+        }
+
+        [Fact]
+        public void SelectFrom_POCO_With_Just_Skip_ValidQuery()
+        {
+            var isValid = GetBuilder().From<Car>()
+                .SelectAll<Car>()
+                .OrderBy<Car>(car => car.ModelYear)
+                .Skip(10)
+                .TryBuild(out var query);
+
+            Assert.True(isValid, "The query should be valid");
+
+            var expectedQuery = $"SELECT [Car].* FROM [Car] ORDER BY [Car].[ModelYear] OFFSET 10 ROWS ";
+            Assert.True(CompareQueries(expectedQuery, query));
+        }
+
+        [Fact]
+        public void SelectFrom_POCO_With_Just_Take_ValidQuery()
+        {
+            var isValid = GetBuilder().From<Car>()
+                .SelectAll<Car>()
+                .OrderBy<Car>(car => car.ModelYear)
+                .Take(10)
+                .TryBuild(out var query);
+
+            Assert.False(isValid, "The query should not be valid");
         }
 
         [Theory]
