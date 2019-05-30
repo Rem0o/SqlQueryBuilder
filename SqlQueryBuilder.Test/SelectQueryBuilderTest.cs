@@ -34,7 +34,7 @@ namespace SqlQueryBuilder.Test
         }
 
         [Fact]
-        public void SelectFrom_POCO_With_Skip_Take_ValidQuery()
+        public void SelectFrom_POCOWithSkipTake_ValidQuery()
         {
             var isValid = GetBuilder().From<Car>()
                 .SelectAll<Car>()
@@ -49,7 +49,7 @@ namespace SqlQueryBuilder.Test
         }
 
         [Fact]
-        public void SelectFrom_POCO_With_Just_Skip_ValidQuery()
+        public void SelectFrom_POCOWithJustSkip_ValidQuery()
         {
             var isValid = GetBuilder().From<Car>()
                 .SelectAll<Car>()
@@ -64,7 +64,7 @@ namespace SqlQueryBuilder.Test
         }
 
         [Fact]
-        public void SelectFrom_POCO_With_Just_Take_ValidQuery()
+        public void SelectFrom_POCOWithJustTake_InvalidQuery()
         {
             var isValid = GetBuilder().From<Car>()
                 .SelectAll<Car>()
