@@ -33,6 +33,48 @@ namespace SqlQueryBuilder.Test
             Assert.True(CompareQueries(expectedQuery, query));
         }
 
+        [Fact]
+        public void SelectFrom_POCOWithSkipTake_ValidQuery()
+        {
+            var isValid = GetBuilder().From<Car>()
+                .SelectAll<Car>()
+                .OrderBy<Car>(car => car.ModelYear)
+                .Skip(10).Take(10)
+                .TryBuild(out var query);
+
+            Assert.True(isValid, "The query should be valid");
+
+            var expectedQuery = $"SELECT [Car].* FROM [Car] ORDER BY [Car].[ModelYear] OFFSET 10 ROWS FETCH NEXT 10 ROWS ONLY ";
+            Assert.True(CompareQueries(expectedQuery, query));
+        }
+
+        [Fact]
+        public void SelectFrom_POCOWithJustSkip_ValidQuery()
+        {
+            var isValid = GetBuilder().From<Car>()
+                .SelectAll<Car>()
+                .OrderBy<Car>(car => car.ModelYear)
+                .Skip(10)
+                .TryBuild(out var query);
+
+            Assert.True(isValid, "The query should be valid");
+
+            var expectedQuery = $"SELECT [Car].* FROM [Car] ORDER BY [Car].[ModelYear] OFFSET 10 ROWS ";
+            Assert.True(CompareQueries(expectedQuery, query));
+        }
+
+        [Fact]
+        public void SelectFrom_POCOWithJustTake_InvalidQuery()
+        {
+            var isValid = GetBuilder().From<Car>()
+                .SelectAll<Car>()
+                .OrderBy<Car>(car => car.ModelYear)
+                .Take(10)
+                .TryBuild(out var query);
+
+            Assert.False(isValid, "The query should not be valid");
+        }
+
         [Theory]
         [InlineData("Automobile", "CarMaker")]
         [InlineData("Voiture", "Manufacturier")]
@@ -121,7 +163,7 @@ namespace SqlQueryBuilder.Test
                 .Select<CarMaker>(maker => new { maker.FoundationDate, maker.Name })
                 .TryBuild(out var query);
 
-            var expectedQuery = $"SELECT {(top > 0 ? $"TOP {top} ": string.Empty)}[CarMaker].[FoundationDate], [CarMaker].[Name] FROM [CarMaker]";
+            var expectedQuery = $"SELECT {(top > 0 ? $"TOP {top} " : string.Empty)}[CarMaker].[FoundationDate], [CarMaker].[Name] FROM [CarMaker]";
 
             Assert.True(isValid == valid);
             if (isValid)
@@ -168,7 +210,7 @@ namespace SqlQueryBuilder.Test
 
         [Fact]
         public void WhereBuilderValidity_Affect_QueryValidity()
-        { 
+        {
             var translator = new SqlTranslator();
             translator.AddTable(typeof(Car));
             translator.AddTable(typeof(CarMaker));
